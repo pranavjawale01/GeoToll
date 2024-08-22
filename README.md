@@ -20,7 +20,10 @@ project_root/
 │       ├── base.html
 │       └── index.html
 │ 
-├── .gitignore
+├── Documents/
+    ├── PPT
+    ├── DOCX
+    ├── Research Paper
 ├── requirements.txt
 ├── README.md
 ```
