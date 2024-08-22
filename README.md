@@ -27,3 +27,12 @@ project_root/
 ├── requirements.txt
 ├── README.md
 ```
+
+## Branch Structure
+```java
+main_branch/
+├── pranav
+├── omkar
+├── dhruv
+├── srushti
+```
