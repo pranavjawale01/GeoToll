@@ -24,13 +24,15 @@ project_root/
 │   ├── PPT
 │   ├── DOCX
 │   ├── Research Paper
+│
 ├── requirements.txt
 ├── README.md
 ```
 
 ## Branch Structure
-```java
+```cpp
 main_branch/
+│
 ├── pranav
 ├── omkar
 ├── dhruv
