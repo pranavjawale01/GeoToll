@@ -1,8 +1,8 @@
 # GeoToll
 
 # Project Structure
-project_root/
-│
+# project_root/
+# │
 ├── Location Tracker App / (API 29 Android 10.0)
 │   ├──
 │   ├──
