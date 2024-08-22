@@ -5,9 +5,9 @@
 project_root/
 │
 ├── Location Tracker App / (API 29 Android 10.0)
-│   ├──
-│   ├──
-│   ├──
+│   ├── Log In Activity
+│   ├── Sign Up Activity
+│   ├── Main Activity
 │   └──
 │
 ├── web_app/
