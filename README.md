@@ -21,9 +21,9 @@ project_root/
 │       └── index.html
 │ 
 ├── Documents/
-    ├── PPT
-    ├── DOCX
-    ├── Research Paper
+│   ├── PPT
+│   ├── DOCX
+│   ├── Research Paper
 ├── requirements.txt
 ├── README.md
 ```
