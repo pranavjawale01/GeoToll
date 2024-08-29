@@ -7,4 +7,6 @@
     <string name="signup">Register\n</string>
     <string name="click_to_login">Click to Login</string>
     <string name="click_to_signup">Click to Sign Up</string>
+    <string name="welcome_track_your_location">Welcome! Track Your Location</string>
+    <string name="log_out">Log Out</string>
 </resources>

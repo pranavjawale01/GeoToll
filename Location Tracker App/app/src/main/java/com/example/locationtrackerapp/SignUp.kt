@@ -3,6 +3,7 @@ package com.example.locationtrackerapp
 import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
+import android.util.Patterns
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
@@ -57,10 +58,17 @@ class SignUp : AppCompatActivity() {
 
             if (TextUtils.isEmpty(email)) {
                 Toast.makeText(this@SignUp, "Enter Email", Toast.LENGTH_SHORT).show()
+                progressBar.visibility = View.GONE
+                return@setOnClickListener
+            }
+            if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                Toast.makeText(this@SignUp, "Enter a valid Email", Toast.LENGTH_SHORT).show()
+                progressBar.visibility = View.GONE
                 return@setOnClickListener
             }
             if (TextUtils.isEmpty(password)) {
                 Toast.makeText(this@SignUp, "Enter Password", Toast.LENGTH_SHORT).show()
+                progressBar.visibility = View.GONE
                 return@setOnClickListener
             }
 
@@ -69,6 +77,9 @@ class SignUp : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     if (task.isSuccessful) {
                         Toast.makeText(this@SignUp, "Account Created.", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(applicationContext, LogIn::class.java)
+                        startActivity(intent)
+                        finish()
                     } else {
                         Toast.makeText(this@SignUp, "Authentication failed.", Toast.LENGTH_SHORT).show()
                     }
