@@ -53,3 +53,4 @@
     git push origin <branch-name>
     ```
 
+# If you have any other commands please contribute 🦭

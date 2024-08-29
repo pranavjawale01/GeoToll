@@ -7,8 +7,7 @@ project_root/
 ├── Location Tracker App / (API 29 Android 10.0)
 │   ├── Log In Activity
 │   ├── Sign Up Activity
-│   ├── Main Activity
-│   └──
+│   └── Main Activity
 │
 ├── web_app/
 │   ├── static/
@@ -23,10 +22,12 @@ project_root/
 ├── Documents/
 │   ├── PPT
 │   ├── DOCX
-│   ├── Research Paper
+│   └── Research Paper
 │
-├── requirements.txt
+├── requirements.md
+├── GIT COMMAND README.md
 ├── README.md
+└── .gitignore
 ```
 
 ## Branch Structure
@@ -36,5 +37,5 @@ main_branch/
 ├── pranav
 ├── omkar
 ├── dhruv
-├── srushti
+└── srushti
 ```
