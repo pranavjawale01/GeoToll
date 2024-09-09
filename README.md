@@ -20,7 +20,7 @@ project_root/
 │       └── index.html
 │   
 ├── DB_Design/
-│   ├── ER DIAGRAAM
+│   ├── ER DIAGRAM
 │   └── Table Schema
 │ 
 ├── Documents/
