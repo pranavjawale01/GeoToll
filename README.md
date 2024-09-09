@@ -18,6 +18,10 @@ project_root/
 │   ├── templates/
 │       ├── base.html
 │       └── index.html
+│   
+├── DB_Design/
+│   ├── ER DIAGRAAM
+│   └── Table Schema
 │ 
 ├── Documents/
 │   ├── PPT
