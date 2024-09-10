@@ -36,7 +36,13 @@ project_root/
 
 ## Branch Structure
 ```cpp
-main_branch/
+branch
+│
+├── main_branch
+│
+├── feature_branch
+│   ├── android
+│   └── webapp
 │
 ├── pranav
 ├── omkar
