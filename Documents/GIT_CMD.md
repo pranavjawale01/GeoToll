@@ -27,23 +27,29 @@
     git log
     ```
 
-6. **Create a new branch:**
+6. **To create a new local branch from the remote one:**
+
+   ```bash
+   git checkout -b <local-branch-name> origin/<remote-branch-name>
+   ```
+
+7. **Create a new branch:**
     ```bash
     git branch <branch-name>
     ```
 
-7. **Switch to a branch:**
+8. **Switch to a branch:**
     ```bash
     git checkout <branch-name>
     ```
 
-8. **Merge a branch into the current branch:**
+9. **Merge a branch into the current branch:**
     ```bash
     git checkout <branch-name>  # Switch to the branch you want to merge into
     git merge <branch-name>     # Merge the specified branch into the current branch
     ```
 
-9. **Pull the latest changes from the remote repository:**
+10. **Pull the latest changes from the remote repository:**
     ```bash
     git pull
     ```
