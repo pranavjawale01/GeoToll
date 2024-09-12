@@ -4,7 +4,7 @@
    ```
 2. **Navigate into the project directory:**
    ```bash
-   cd map-location
+   cd WebApp
    ```
 3. **Install all dependencies:**
    ```bash
