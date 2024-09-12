@@ -4,7 +4,7 @@
 ```js
 project_root/
 │
-├── Location Tracker App / (API 29 Android 10.0)
+├── Location Tracker App/
 │   ├── Log In Activity
 │   ├── Sign Up Activity
 │   └── Main Activity
@@ -19,24 +19,19 @@ project_root/
 │       ├── base.html
 │       └── index.html
 │   
-├── DB_Design/
-│   ├── ER DIAGRAM
-│   └── Table Schema
 │ 
 ├── Documents/
-│   ├── PPT
-│   ├── DOCX
-│   └── Research Paper
+│   ├── DB_Design/
+│   │   ├── ER DIAGRAM
+│   │   └── Table Schema
+│   ├── Requirements
+│   └── Github Commands
 │
-├── requirements.md
-├── GIT COMMAND README.md
-├── README.md
 └── .gitignore
 ```
 
 ## Branch Structure
 ```cpp
-branch
 │
 ├── main_branch
 │
@@ -44,8 +39,5 @@ branch
 │   ├── android
 │   └── webapp
 │
-├── pranav
-├── omkar
-├── dhruv
-└── srushti
+└── backup branch
 ```
