@@ -2,23 +2,27 @@
    ```bash
    git clone https://github.com/pranavjawale01/GeoToll.git
    ```
-2. **Navigate into the project directory:**
+2. **Change Branch to webapp:**
    ```bash
-   cd map-location
+   git checkout webapp
    ```
-3. **Install all dependencies:**
+3. **Navigate into the project directory:**
+   ```bash
+   cd WebApp
+   ```
+4. **Install all dependencies:**
    ```bash
    npm install
    ```
-4. **Install Firebase:**
+5. **Install Firebase:**
    ```bash
    npm install firebase
    ```
-5. **Install a Mapping Library:**
+6. **Install a Mapping Library:**
    ```bash
    npm install react-leaflet leaflet
    ```
-6. **Test the Web App**
+7. **Test the Web App**
    ```bash
    npm start
    ```
