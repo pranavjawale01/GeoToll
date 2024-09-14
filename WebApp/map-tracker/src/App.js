@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
-import UserLocation from './components/UserLocation';
-import UserMap from './components/UserMap';
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Login from './components/Login';
+import Signup from './components/Signup';
+import Dashboard from './components/Dashboard';
 
 const App = () => {
-  const [locations, setLocations] = useState([]);
-  
   return (
-    <div>
-      <h1>User Location Tracker</h1>
-      <UserLocation onLocationsUpdate={setLocations} />
-      {locations.length > 0 && <UserMap locations={locations} />}
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </Router>
   );
 };
 
