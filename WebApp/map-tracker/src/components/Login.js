@@ -28,16 +28,16 @@ const Login = () => {
     const users = JSON.parse(localStorage.getItem('users')) || [];
 
     // Debugging: Check what is retrieved from local storage
-    console.log('Retrieved users from local storage:', users);
+    //console.log('Retrieved users from local storage:', users);
 
     // Find the user with matching email and password (after trimming any extra spaces)
     const storedUser = users.find((user) => 
       user.email.trim() === email.trim() && user.password === password
     );
 
-    // Debugging: Check the comparison process
-    console.log(`Comparing stored email: ${storedUser ? storedUser.email : 'not found'} with input email: ${email}`);
-    console.log(`Comparing stored password: ${storedUser ? storedUser.password : 'not found'} with input password: ${password}`);
+    // // Debugging: Check the comparison process
+    // console.log(`Comparing stored email: ${storedUser ? storedUser.email : 'not found'} with input email: ${email}`);
+    // console.log(`Comparing stored password: ${storedUser ? storedUser.password : 'not found'} with input password: ${password}`);
 
     if (storedUser) {
       // Mark the user as logged in
