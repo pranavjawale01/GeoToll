@@ -10,6 +10,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const storage = firebase.storage(); // Initialize Firebase Storage for file uploads
 
 // Get IP Address using Ipify
 async function getIpAddress() {
@@ -28,24 +29,39 @@ document.getElementById("detailsForm").addEventListener("submit", async function
     event.preventDefault(); // Prevent the form from submitting normally
 
     const userName = document.getElementById("userName").value;
-    const userEmail = document.getElementById("userEmail").value;
     const userMobileNo = document.getElementById("userMobileNo").value;
-    const userProfile = document.getElementById("userProfile").value || ""; // Optional field
+    const userProfile = document.getElementById("userProfile").files[0]; // Get the file object
     const userDOB = document.getElementById("userDOB").value;
     const userAge = document.getElementById("userAge").value;
     const userAddress = document.getElementById("userAddress").value;
-    const userGender = document.getElementById("userGender").value;
+    
+    // Get selected gender
+    const userGender = document.querySelector('input[name="user_gender"]:checked').value;
 
     const createdAt = new Date().toISOString(); // Current timestamp
     const lastLogin = createdAt; // Same as created for first login
     const loginIpAddress = await getIpAddress(); // Fetch IP address
 
+    let profileImageUrl = "";
+
+    // If profile image is uploaded, upload to Firebase Storage
+    if (userProfile) {
+        const storageRef = storage.ref(`profiles/${userProfile.name}`);
+        try {
+            const snapshot = await storageRef.put(userProfile);
+            profileImageUrl = await snapshot.ref.getDownloadURL();
+        } catch (error) {
+            console.error("Error uploading profile image: ", error);
+            alert("Error uploading profile image. Please try again.");
+            return;
+        }
+    }
+
     // Add user details to Firebase Firestore
     db.collection("users").add({
         user_name: userName,
-        user_email: userEmail,
         user_mobileno: parseInt(userMobileNo),
-        user_profile: userProfile,
+        user_profile: profileImageUrl, // Use the uploaded image URL
         user_dob: userDOB,
         user_age: parseInt(userAge),
         user_address: userAddress,
@@ -55,7 +71,7 @@ document.getElementById("detailsForm").addEventListener("submit", async function
         login_ip_address: loginIpAddress
     }).then(() => {
         alert("User details submitted successfully.");
-        window.location.href = "/WebApp/signup/login.html"; // Redirect after successful submission
+        window.location.href = "/WebApp/login/login.html"; // Redirect after successful submission
     }).catch((error) => {
         console.error("Error adding user: ", error);
         alert("There was an error submitting your details.");
