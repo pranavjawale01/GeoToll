@@ -22,7 +22,15 @@
    ```bash
    npm install react-leaflet leaflet
    ```
-7. **Test the Web App**
+7. **Install react-router-dom to add Routes for Navigation:**
+   ```bash
+   npm install react-router-dom
+   ```
+8. **Install the uuid Library:**
+   ```bash
+   npm install uuid
+   ```
+9. **Test the Web App**
    ```bash
    npm start
    ```
