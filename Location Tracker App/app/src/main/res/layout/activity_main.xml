@@ -5,18 +5,37 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
+    android:padding="16dp"
     tools:context=".MainActivity">
 
+    <!-- TextView to display the user's name -->
+    <TextView
+        android:id="@+id/name_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="User Name"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"
+        android:textColor="@android:color/black" />
+
+    <!-- TextView to display user details (e.g., email) -->
     <TextView
         android:id="@+id/user_details"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/welcome_track_your_location" />
+        android:text="@string/welcome_track_your_location"
+        android:textSize="16sp"
+        android:layout_marginBottom="24dp"
+        android:textColor="@android:color/darker_gray" />
 
+    <!-- Button for logging out -->
     <Button
-        android:text="@string/log_out"
         android:id="@+id/logout"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:text="@string/log_out"
+        android:backgroundTint="@android:color/holo_red_light"
+        android:textColor="@android:color/white" />
 
 </LinearLayout>
