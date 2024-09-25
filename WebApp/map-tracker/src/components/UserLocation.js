@@ -1,6 +1,6 @@
 import  { useEffect } from 'react';
 
-//  array of locations
+//  array of geolocation points
 const simulatedLocations = [
   { latitude: 18.58437, longitude: 73.73623 }, 
   { latitude: 18.58407, longitude: 73.73676 }, 
