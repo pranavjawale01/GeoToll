@@ -41,3 +41,7 @@ project_root/
 │
 └── backup branch
 ```
+
+```shell
+[View the Geo Gurus Poster](docs/Geo_Gurus_Poster.pdf)
+```
