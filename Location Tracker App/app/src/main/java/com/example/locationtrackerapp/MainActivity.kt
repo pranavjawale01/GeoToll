@@ -33,6 +33,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private lateinit var speedTextView: TextView
+    private lateinit var currentDistanceTimeTextView: TextView
 
     private var totalDistance = 0.0
     private var previousLocation: Location? = null
@@ -53,6 +54,7 @@ class MainActivity : ComponentActivity() {
         toggleButton = findViewById(R.id.toggle_button)
         distanceTextView = findViewById(R.id.distance_text_view)
         speedTextView = findViewById(R.id.speed_text_view)
+        currentDistanceTimeTextView = findViewById(R.id.current_distance_time_text_view)
         coordinatesTextView = findViewById(R.id.coordinates_text_view)
         errorTextView = findViewById(R.id.error_text_view)
 
@@ -102,8 +104,9 @@ class MainActivity : ComponentActivity() {
         user?.let { currentUser ->
             FirebaseHelper.saveLocation(currentUser.uid, location.latitude, location.longitude)
 
-            // Calculate distance and speed
+            // Calculate distance, speed, and time interval
             previousLocation?.let { previous ->
+                // Calculate distance between previous and current location
                 val distance = DistanceCalculator.haversine(previous.latitude, previous.longitude, location.latitude, location.longitude)
                 totalDistance += distance.toDouble()
                 distanceTextView.text = String.format("Total Distance: %.2f meters", totalDistance)
@@ -111,14 +114,24 @@ class MainActivity : ComponentActivity() {
                 // Save total distance to Firebase
                 FirebaseHelper.saveTotalDistance(currentUser.uid, totalDistance)
 
-                // Calculate and display speed
+                // Calculate speed
                 val speed = SpeedCalculator.calculateSpeed(previous, location)
                 speedTextView.text = String.format("Speed: %.2f km/h", speed)
+
+                // Calculate time interval between updates
+                val timeInterval = (location.time - previous.time) / 1000.0 // Time in seconds
+
+                // Display current distance and time interval below speed
+                val currentDistanceAndTime = String.format("Current Distance: %.2f m, Time Interval: %.2f s", distance, timeInterval)
+                currentDistanceTimeTextView.text = currentDistanceAndTime
+                currentDistanceTimeTextView.setTextColor(ContextCompat.getColor(this, android.R.color.black))
             }
         }
 
+        // Update previous location
         previousLocation = location
     }
+
 
     private fun navigateToLogin() {
         startActivity(Intent(this, LogIn::class.java))
