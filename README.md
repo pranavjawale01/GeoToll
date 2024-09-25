@@ -42,4 +42,4 @@ project_root/
 └── backup branch
 ```
 
-[View the Geo Gurus Poster](docs/Geo_Gurus_Poster.pdf)
+![Geo Gurus Poster](https://github.com/pranavjawale01/GeoToll/blob/main/Documents/Poster/Geo_Gurus_Poster_Compress_low-to-jpg-0001.jpg?raw=true)
