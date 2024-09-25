@@ -26,11 +26,19 @@
    ```bash
    npm install react-router-dom
    ```
-8. **Install the uuid Library:**
+8. **Install the uuid Library: (just for local storage purpose)**
    ```bash
    npm install uuid
    ```
-9. **Test the Web App**
+9. **Install Material UI**
+   ```bash
+   npm install @mui/material @emotion/react @emotion/styled
+   ```
+10. **Install Material UI icons**
+   ```bash
+   npm install @mui/icons-material
+   ```
+11. **Test the Web App**
    ```bash
    npm start
    ```
