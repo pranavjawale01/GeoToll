@@ -62,6 +62,16 @@
         android:layout_marginTop="16dp"
         android:textColor="@android:color/holo_blue_dark" />
 
+    <!-- TextView to display speed in kmph -->
+    <TextView
+        android:id="@+id/speed_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Speed: 0.0 km/h"
+        android:textSize="16sp"
+        android:layout_marginTop="8dp"
+        />
+
     <!-- TextView to display real-time coordinates -->
     <TextView
         android:id="@+id/coordinates_text_view"

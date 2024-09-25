@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
     private var user: FirebaseUser? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
+    private lateinit var speedTextView: TextView
 
     private var totalDistance = 0.0
     private var previousLocation: Location? = null
@@ -51,6 +52,7 @@ class MainActivity : ComponentActivity() {
         emailTextView = findViewById(R.id.user_details)
         toggleButton = findViewById(R.id.toggle_button)
         distanceTextView = findViewById(R.id.distance_text_view)
+        speedTextView = findViewById(R.id.speed_text_view)
         coordinatesTextView = findViewById(R.id.coordinates_text_view)
         errorTextView = findViewById(R.id.error_text_view)
 
@@ -100,6 +102,7 @@ class MainActivity : ComponentActivity() {
         user?.let { currentUser ->
             FirebaseHelper.saveLocation(currentUser.uid, location.latitude, location.longitude)
 
+            // Calculate distance and speed
             previousLocation?.let { previous ->
                 val distance = DistanceCalculator.haversine(previous.latitude, previous.longitude, location.latitude, location.longitude)
                 totalDistance += distance.toDouble()
@@ -107,6 +110,10 @@ class MainActivity : ComponentActivity() {
 
                 // Save total distance to Firebase
                 FirebaseHelper.saveTotalDistance(currentUser.uid, totalDistance)
+
+                // Calculate and display speed
+                val speed = SpeedCalculator.calculateSpeed(previous, location)
+                speedTextView.text = String.format("Speed: %.2f km/h", speed)
             }
         }
 
