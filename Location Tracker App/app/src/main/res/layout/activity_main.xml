@@ -112,5 +112,27 @@
         android:layout_marginTop="16dp"
         android:visibility="gone" />
 
+    <TextView
+        android:id="@+id/highway_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="\n\nHighway Status"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/highway_name_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Highway Name"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/total_highway_distance_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Total Highway Distance: 0.00 meters"
+        android:textSize="16sp" />
+
+
 
 </LinearLayout>

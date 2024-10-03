@@ -30,18 +30,24 @@ class MainActivity : ComponentActivity() {
     private lateinit var emailTextView: TextView
     private lateinit var toggleButton: ToggleButton
     private lateinit var distanceTextView: TextView
+    private lateinit var speedTextView: TextView
     private lateinit var coordinatesTextView: TextView
     private lateinit var errorTextView: TextView
+    private lateinit var highwayTextView: TextView // TextView to show highway information
+    private lateinit var highwayNameTextView: TextView // TextView to show the highway name
+    private lateinit var totalHighwayDistanceTextView: TextView // TextView for total highway distance
+    private lateinit var currentDistanceTimeTextView: TextView
+
     private var user: FirebaseUser? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
-    private lateinit var speedTextView: TextView
-    private lateinit var currentDistanceTimeTextView: TextView
-
     private var totalDistance = 0.0
+    private var totalHighwayDistance = 0.0 // Variable to track total highway distance
     private var previousLocation: Location? = null
     private var isTracking = false
     private val REQUEST_CHECK_SETTINGS = 1001
+    private var lastRequestTime: Long = 0 // To throttle requests
+    private val REQUEST_INTERVAL = 10000 // 10 seconds
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +66,9 @@ class MainActivity : ComponentActivity() {
         currentDistanceTimeTextView = findViewById(R.id.current_distance_time_text_view)
         coordinatesTextView = findViewById(R.id.coordinates_text_view)
         errorTextView = findViewById(R.id.error_text_view)
+        highwayTextView = findViewById(R.id.highway_text_view) // Initialize the highway TextView
+        highwayNameTextView = findViewById(R.id.highway_name_text_view) // TextView for highway name
+        totalHighwayDistanceTextView = findViewById(R.id.total_highway_distance_text_view) // TextView for total highway distance
 
         // Get current user
         user = auth.currentUser
@@ -106,6 +115,13 @@ class MainActivity : ComponentActivity() {
         // Save latitude and longitude to Firebase
         Firebase.saveLocation(user!!.uid, location.latitude, location.longitude)
 
+        // Throttle requests to avoid frequent calls
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastRequestTime < REQUEST_INTERVAL) {
+            return // Do not make a new request if it's too soon
+        }
+        lastRequestTime = currentTime
+
         // Calculate distance, speed, and time interval
         previousLocation?.let { previous ->
             val distance = DistanceCalculator.haversine(previous.latitude, previous.longitude, location.latitude, location.longitude)
@@ -124,6 +140,22 @@ class MainActivity : ComponentActivity() {
             val currentDistanceAndTime = String.format("Current Distance: %.2f m, Time Interval: %.2f s", distance, timeInterval)
             currentDistanceTimeTextView.text = currentDistanceAndTime
             currentDistanceTimeTextView.setTextColor(ContextCompat.getColor(this, android.R.color.black))
+
+            // Check if the current location is on a highway
+            HighwayChecker.isHighway(HighwayChecker.Coordinates(location.latitude, location.longitude)) { isOnHighway, highwayName ->
+                runOnUiThread {
+                    if (isOnHighway) {
+                        highwayTextView.text = "\n\nYou are on a highway!"
+                        // Update total highway distance
+                        totalHighwayDistance += distance.toDouble()
+
+                    } else {
+                        highwayTextView.text = "\n\nYou are not on a highway."
+                    }
+                    totalHighwayDistanceTextView.text = String.format("Total Highway Distance: %.2f meters", totalHighwayDistance)
+                    highwayNameTextView.text = highwayName ?: "Road name not available"
+                }
+            }
         }
 
         // Update previous location
@@ -145,7 +177,7 @@ class MainActivity : ComponentActivity() {
 
     private fun checkLocationSettings() {
         val locationRequest = LocationRequest.create().apply {
-            interval = 10000 // Set to 2 seconds
+            interval = 10000 // Set to 10 seconds
             fastestInterval = 5000 // Faster interval for updates
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
@@ -177,36 +209,16 @@ class MainActivity : ComponentActivity() {
         try {
             fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
         } catch (e: SecurityException) {
-            showError("Location permission not granted")
+            showError("Location permission not granted.")
         }
     }
 
     private fun stopLocationUpdates() {
         isTracking = false
         fusedLocationClient.removeLocationUpdates(locationCallback)
-        previousLocation = null
     }
 
     private fun showError(message: String) {
         errorTextView.text = message
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 1 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            checkLocationSettings()
-        } else {
-            Log.e("MainActivity", "Location permission denied")
-            showError("Location permission denied")
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_CHECK_SETTINGS && resultCode == RESULT_OK) {
-            requestLocationPermission()
-        } else {
-            showError("User denied location settings.")
-        }
     }
 }

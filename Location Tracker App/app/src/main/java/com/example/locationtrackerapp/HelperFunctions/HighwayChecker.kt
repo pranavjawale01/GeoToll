@@ -22,7 +22,7 @@ object HighwayChecker {
     )
 
     // Function to check if the location is on a highway
-    fun isHighway(coordinates: Coordinates, callback: (Boolean) -> Unit) {
+    fun isHighway(coordinates: Coordinates, callback: (Boolean, String?) -> Unit) {
         val query = """
             [out:json];
             way(around:10, ${coordinates.latitude}, ${coordinates.longitude})["highway"];
@@ -42,13 +42,13 @@ object HighwayChecker {
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 println("Error making API request: ${e.message}")
-                callback(false) // On failure, assume it's not a highway
+                callback(false, null) // On failure, assume it's not a highway
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
                     println("API request failed: ${response.message}")
-                    callback(false) // On error, return false
+                    callback(false, null) // On error, return false
                     return
                 }
 
@@ -71,31 +71,30 @@ object HighwayChecker {
                             tags.name?.let { name ->
                                 val containsHighway = name.lowercase().split(" ").any { it.contains("highway") || it.contains("expressway") }
                                 if (containsHighway) {
-                                    callback(true)
+                                    callback(true, name) // Pass back the highway name
                                     return
                                 }
                             }
 
                             // Check if 'ref' contains "NH" or "MH" (case-insensitive)
                             tags.ref?.let { ref ->
-                                // Corrected the syntax for set declaration
-                                val prefixes = setOf("nh", "mh", "msh", "me")
+                                val prefixes = setOf("nh", "sh", "mh", "msh", "me")
                                 if (prefixes.any { ref.lowercase().startsWith(it) }) {
-                                    callback(true)
+                                    callback(true, ref) // Pass back the highway ref
                                     return
                                 }
                             }
                         }
 
                         // If no matching highway found
-                        callback(false)
+                        callback(false, null)
                     } catch (e: Exception) {
                         println("Error parsing JSON: ${e.message}")
-                        callback(false) // Handle parsing error
+                        callback(false, null) // Handle parsing error
                     }
                 } ?: run {
                     println("No response body, returning false")
-                    callback(false) // No response body, return false
+                    callback(false, null) // No response body, return false
                 }
             }
         })
@@ -111,19 +110,23 @@ object HighwayChecker {
 }
 
 
+
 // Testing purpose only  -- don't remove the commented code
 //
 //fun main() {
-//    // Example coordinates
-//    val coordinates = HighwayChecker.Coordinates(21.455291, 78.203682)
+//    // Example coordinates (Change this to test with different coordinates)
+//    val coordinates = HighwayChecker.Coordinates(21.455051, 78.205200)
 //
-//    HighwayChecker.isHighway(coordinates) { isOnHighway ->
+//    // Call isHighway and handle the callback
+//    HighwayChecker.isHighway(coordinates) { isOnHighway, highwayInfo ->
 //        if (isOnHighway) {
-//            println("Location is on a highway")
+//            println("Location is on a highway. Highway info: $highwayInfo")
 //        } else {
-//            println("Location is not on a highway")
+//            println("Location is not on a highway.")
 //        }
 //    }
 //
+//    // Sleep the main thread to allow time for the async network call to complete
+//    // You can adjust this delay based on your network speed
 //    Thread.sleep(5000)
 //}
