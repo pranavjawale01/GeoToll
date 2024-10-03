@@ -19,6 +19,9 @@ object HighwayChecker {
 
         val requestUrl = "$OVERPASS_API_URL?data=${query.toUrlEncoded()}"
 
+        // Print the constructed API link
+        println("API Request URL: $requestUrl")
+
         val client = OkHttpClient()
         val request = Request.Builder()
             .url(requestUrl)
@@ -39,32 +42,62 @@ object HighwayChecker {
 
                 response.body?.let { responseBody ->
                     val responseData = responseBody.string()
-                    val json = JSONObject(responseData)
 
-                    if (json.has("elements")) {
-                        val elements = json.getJSONArray("elements")
-                        for (i in 0 until elements.length()) {
-                            val element = elements.getJSONObject(i)
-                            val tags = element.getJSONObject("tags")
+                    // Print the raw response data for debugging
+                    println("Response Data: $responseData") // Debugging line
 
-                            if (tags.has("ref")) {
-                                val ref = tags.getString("ref")
-                                if (ref.startsWith("NH") || ref.startsWith("SH")) {
+                    try {
+                        val json = JSONObject(responseData)
+
+                        // Check if 'elements' array exists
+                        if (json.has("tags")) {
+                            val elements = json.getJSONArray("tags")
+                            for (i in 0 until elements.length()) {
+                                val element = elements.getJSONObject(i)
+                                val tags = element.getJSONObject("highway")
+
+                                // Check if 'highway' is present in tags
+                                if (tags.has("truck")) {
+                                    // Highway is explicitly mentioned, so declare it as a highway
                                     callback(true)
                                     return
                                 }
+
+                                // Check if 'name' contains "highway" (case-insensitive)
+                                if (tags.has("name")) {
+                                    val name = tags.getString("name").lowercase()
+                                    if (name.contains("highway")) {
+                                        callback(true)
+                                        return
+                                    }
+                                }
+
+                                // Check if 'ref' contains "NH" or "MH" (case-insensitive)
+                                if (tags.has("ref")) {
+                                    val ref = tags.getString("ref").lowercase()
+                                    if (ref.startsWith("nh") || ref.startsWith("mh")) {
+                                        callback(true)
+                                        return
+                                    }
+                                }
                             }
                         }
-                    }
 
-                    callback(false) // No matching highway found
+                        // If no matching highway found
+                        callback(false)
+                    } catch (e: Exception) {
+                        println("Error parsing JSON: ${e.message}")
+                        callback(false) // Handle parsing error
+                    }
                 } ?: run {
+                    println("No response body, returning false")
                     callback(false) // No response body, return false
                 }
             }
         })
     }
 
+    // Helper function to URL encode the query
     private fun String.toUrlEncoded(): String {
         return this.replace(" ", "%20")
             .replace("\n", "%0A")
@@ -75,7 +108,7 @@ object HighwayChecker {
 
 fun main() {
     // Example coordinates
-    val coordinates = HighwayChecker.Coordinates(18.588942, 73.758388)
+    val coordinates = HighwayChecker.Coordinates(21.77433, 78.27433)
 
     HighwayChecker.isHighway(coordinates) { isOnHighway ->
         if (isOnHighway) {
