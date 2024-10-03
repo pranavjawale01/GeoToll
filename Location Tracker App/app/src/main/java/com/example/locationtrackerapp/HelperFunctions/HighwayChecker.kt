@@ -1,5 +1,6 @@
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import okhttp3.*
-import org.json.JSONObject
 import java.io.IOException
 
 object HighwayChecker {
@@ -8,6 +9,17 @@ object HighwayChecker {
 
     // Data class to represent a geographic location
     data class Coordinates(val latitude: Double, val longitude: Double)
+
+    // Data classes for parsing JSON response
+    data class OverpassResponse(val elements: List<Element>)
+
+    data class Element(val tags: Tags)
+
+    data class Tags(
+        @SerializedName("highway") val highway: String? = null,
+        @SerializedName("name") val name: String? = null,
+        @SerializedName("ref") val ref: String? = null
+    )
 
     // Function to check if the location is on a highway
     fun isHighway(coordinates: Coordinates, callback: (Boolean) -> Unit) {
@@ -47,38 +59,30 @@ object HighwayChecker {
                     println("Response Data: $responseData") // Debugging line
 
                     try {
-                        val json = JSONObject(responseData)
+                        // Use Gson to parse JSON
+                        val gson = Gson()
+                        val jsonResponse = gson.fromJson(responseData, OverpassResponse::class.java)
 
-                        // Check if 'elements' array exists
-                        if (json.has("tags")) {
-                            val elements = json.getJSONArray("tags")
-                            for (i in 0 until elements.length()) {
-                                val element = elements.getJSONObject(i)
-                                val tags = element.getJSONObject("highway")
+                        // Check if any element has a highway tag
+                        for (element in jsonResponse.elements) {
+                            val tags = element.tags
 
-                                // Check if 'highway' is present in tags
-                                if (tags.has("truck")) {
-                                    // Highway is explicitly mentioned, so declare it as a highway
+                            // Check if 'name' contains "highway" or "expressway" (case-insensitive)
+                            tags.name?.let { name ->
+                                val containsHighway = name.lowercase().split(" ").any { it.contains("highway") || it.contains("expressway") }
+                                if (containsHighway) {
                                     callback(true)
                                     return
                                 }
+                            }
 
-                                // Check if 'name' contains "highway" (case-insensitive)
-                                if (tags.has("name")) {
-                                    val name = tags.getString("name").lowercase()
-                                    if (name.contains("highway")) {
-                                        callback(true)
-                                        return
-                                    }
-                                }
-
-                                // Check if 'ref' contains "NH" or "MH" (case-insensitive)
-                                if (tags.has("ref")) {
-                                    val ref = tags.getString("ref").lowercase()
-                                    if (ref.startsWith("nh") || ref.startsWith("mh")) {
-                                        callback(true)
-                                        return
-                                    }
+                            // Check if 'ref' contains "NH" or "MH" (case-insensitive)
+                            tags.ref?.let { ref ->
+                                // Corrected the syntax for set declaration
+                                val prefixes = setOf("nh", "mh", "msh", "me")
+                                if (prefixes.any { ref.lowercase().startsWith(it) }) {
+                                    callback(true)
+                                    return
                                 }
                             }
                         }
@@ -106,18 +110,20 @@ object HighwayChecker {
     }
 }
 
-fun main() {
-    // Example coordinates
-    val coordinates = HighwayChecker.Coordinates(21.77433, 78.27433)
 
-    HighwayChecker.isHighway(coordinates) { isOnHighway ->
-        if (isOnHighway) {
-            println("Location is on a highway")
-        } else {
-            println("Location is not on a highway")
-        }
-    }
-
-    // Prevent the main thread from exiting immediately
-    Thread.sleep(5000) // Adjust the time as needed
-}
+// Testing purpose only  -- don't remove the commented code
+//
+//fun main() {
+//    // Example coordinates
+//    val coordinates = HighwayChecker.Coordinates(21.455291, 78.203682)
+//
+//    HighwayChecker.isHighway(coordinates) { isOnHighway ->
+//        if (isOnHighway) {
+//            println("Location is on a highway")
+//        } else {
+//            println("Location is not on a highway")
+//        }
+//    }
+//
+//    Thread.sleep(5000)
+//}
