@@ -1,4 +1,4 @@
-package com.example.locationtrackerapp
+package com.example.locationtrackerapp.HelperFunctions
 
 import java.math.BigDecimal
 import java.math.RoundingMode

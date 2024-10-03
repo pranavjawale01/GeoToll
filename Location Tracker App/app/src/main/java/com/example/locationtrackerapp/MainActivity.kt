@@ -14,6 +14,9 @@ import android.widget.ToggleButton
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.locationtrackerapp.HelperFunctions.DistanceCalculator
+import com.example.locationtrackerapp.HelperFunctions.Firebase
+import com.example.locationtrackerapp.HelperFunctions.SpeedCalculator
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.firebase.auth.FirebaseAuth
@@ -64,7 +67,7 @@ class MainActivity : ComponentActivity() {
             navigateToLogin()
         } else {
             emailTextView.text = user!!.email
-            FirebaseHelper.fetchUserName(user!!.uid) { name ->
+            Firebase.fetchUserName(user!!.uid) { name ->
                 nameTextView.text = name ?: "Name not found"
             }
         }
@@ -101,37 +104,31 @@ class MainActivity : ComponentActivity() {
         coordinatesTextView.text = String.format("Lat: %.8f, Long: %.8f", location.latitude, location.longitude)
 
         // Save latitude and longitude to Firebase
-        user?.let { currentUser ->
-            FirebaseHelper.saveLocation(currentUser.uid, location.latitude, location.longitude)
+        Firebase.saveLocation(user!!.uid, location.latitude, location.longitude)
 
-            // Calculate distance, speed, and time interval
-            previousLocation?.let { previous ->
-                // Calculate distance between previous and current location
-                val distance = DistanceCalculator.haversine(previous.latitude, previous.longitude, location.latitude, location.longitude)
-                totalDistance += distance.toDouble()
-                distanceTextView.text = String.format("Total Distance: %.2f meters", totalDistance)
+        // Calculate distance, speed, and time interval
+        previousLocation?.let { previous ->
+            val distance = DistanceCalculator.haversine(previous.latitude, previous.longitude, location.latitude, location.longitude)
+            totalDistance += distance.toDouble()
+            distanceTextView.text = String.format("Total Distance: %.2f meters", totalDistance)
 
-                // Save total distance to Firebase
-                FirebaseHelper.saveTotalDistance(currentUser.uid, totalDistance)
+            // Save total distance to Firebase
+            Firebase.saveTotalDistance(user!!.uid, totalDistance)
 
-                // Calculate speed
-                val speed = SpeedCalculator.calculateSpeed(previous, location)
-                speedTextView.text = String.format("Speed: %.2f km/h", speed)
+            // Calculate speed
+            val speed = SpeedCalculator.calculateSpeed(previous, location)
+            speedTextView.text = String.format("Speed: %.2f km/h", speed)
 
-                // Calculate time interval between updates
-                val timeInterval = (location.time - previous.time) / 1000.0 // Time in seconds
-
-                // Display current distance and time interval below speed
-                val currentDistanceAndTime = String.format("Current Distance: %.2f m, Time Interval: %.2f s", distance, timeInterval)
-                currentDistanceTimeTextView.text = currentDistanceAndTime
-                currentDistanceTimeTextView.setTextColor(ContextCompat.getColor(this, android.R.color.black))
-            }
+            // Calculate time interval between updates
+            val timeInterval = (location.time - previous.time) / 1000.0 // Time in seconds
+            val currentDistanceAndTime = String.format("Current Distance: %.2f m, Time Interval: %.2f s", distance, timeInterval)
+            currentDistanceTimeTextView.text = currentDistanceAndTime
+            currentDistanceTimeTextView.setTextColor(ContextCompat.getColor(this, android.R.color.black))
         }
 
         // Update previous location
         previousLocation = location
     }
-
 
     private fun navigateToLogin() {
         startActivity(Intent(this, LogIn::class.java))
@@ -148,8 +145,8 @@ class MainActivity : ComponentActivity() {
 
     private fun checkLocationSettings() {
         val locationRequest = LocationRequest.create().apply {
-            interval = 2000 // Set to 2 seconds
-            fastestInterval = 500 // Faster interval for updates
+            interval = 10000 // Set to 2 seconds
+            fastestInterval = 5000 // Faster interval for updates
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
 
@@ -167,7 +164,7 @@ class MainActivity : ComponentActivity() {
                     try {
                         exception.startResolutionForResult(this, REQUEST_CHECK_SETTINGS)
                     } catch (sendEx: IntentSender.SendIntentException) {
-                        // Ignore the error
+                        showError("Error starting resolution for location settings.")
                     }
                 } else {
                     showError("Location settings are not satisfied.")
@@ -206,13 +203,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_CHECK_SETTINGS) {
-            if (resultCode == RESULT_OK) {
-                // User agreed to enable location settings
-                requestLocationPermission() // Recheck permission
-            } else {
-                showError("User denied location settings.")
-            }
+        if (requestCode == REQUEST_CHECK_SETTINGS && resultCode == RESULT_OK) {
+            requestLocationPermission()
+        } else {
+            showError("User denied location settings.")
         }
     }
 }
