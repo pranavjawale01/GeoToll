@@ -1,4 +1,0 @@
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_checked="true" android:drawable="@color/holo_green_light" />
-    <item android:state_checked="false" android:drawable="@color/holo_red_light" />
-</selector>
