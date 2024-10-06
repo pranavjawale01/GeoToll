@@ -1,13 +1,14 @@
 {
   "project_info": {
     "project_number": "36416331605",
+    "firebase_url": "https://location-tracker-firebas-d970f-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "location-tracker-firebas-d970f",
     "storage_bucket": "location-tracker-firebas-d970f.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:36416331605:android:40dceeb3d969a364da19dc",
+        "mobilesdk_app_id": "1:36416331605:android:2dbae06940cc3caada19dc",
         "android_client_info": {
           "package_name": "com.example.locationtrackerapp"
         }
