@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AppBar,
   Toolbar,
@@ -22,6 +22,10 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
+import { getDatabase, ref, set } from "firebase/database"; // Firebase imports
+// Corrected import for the authentication context
+import { useAuth } from "../context/AuthContext"; // Adjusted import path
+
 const drawerWidthExpanded = 220; // Expanded width
 const drawerWidthCollapsed = 60; // Collapsed width
 
@@ -30,9 +34,39 @@ const Dashboard = () => {
   const [locations, setLocations] = useState([]);
   const navigate = useNavigate();
 
+  // Get user information from auth context
+  const { userId, logout } = useAuth(); // This assumes useAuth provides the user ID
+
+  // Firebase Database instance
+  const database = getDatabase();
+
   // Handle Profile Navigation
   const handleProfileClick = () => {
     navigate("/profile");
+  };
+
+  // Handle Logout (if needed, replace with actual logout logic)
+  const handleLogoutClick = async () => {
+    console.log("Logging out...");
+    if (userId) {
+      try {
+        // Reference to the user's data in the database
+        const userRef = ref(database, "users/" + userId);
+
+        // Update the isLoggedIn status to false on logout
+        await set(userRef, {
+          isLoggedIn: false, // Set this to false on logout
+        });
+
+        // Logout the user (this could clear the auth state)
+        logout();
+
+        // Redirect to login page
+        navigate("/");
+      } catch (error) {
+        console.error("Error logging out:", error);
+      }
+    }
   };
 
   // Drawer items
@@ -42,8 +76,18 @@ const Dashboard = () => {
       icon: <DashboardIcon />,
       onClick: () => navigate("/dashboard"),
     },
-    { text: "Logout", icon: <LogoutIcon /> }, // Add logout option
+    {
+      text: "Logout",
+      icon: <LogoutIcon />,
+      onClick: handleLogoutClick,
+    },
   ];
+
+  useEffect(() => {
+    if (!userId) {
+      navigate("/"); // Navigate to login if user is not authenticated
+    }
+  }, [userId, navigate]); // Re-run effect if userId changes
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -69,6 +113,7 @@ const Dashboard = () => {
             <MenuIcon />
           </IconButton>
 
+          {/* Project Icon */}
           <Box
             noWrap
             component="img"
@@ -118,7 +163,7 @@ const Dashboard = () => {
         <Toolbar />
         <Box sx={{ overflow: "auto" }}>
           <List>
-            {drawerItems.map((item, index) => (
+            {drawerItems.map((item) => (
               <ListItem button key={item.text} onClick={item.onClick}>
                 <ListItemIcon>{item.icon}</ListItemIcon>
                 {isDrawerOpen && <ListItemText primary={item.text} />}
@@ -137,23 +182,35 @@ const Dashboard = () => {
           Welcome to the Dashboard
         </Typography>
 
-        {/* Your existing content */}
+        {/* Content for location tracking */}
         <Box>
           <Typography variant="h6" gutterBottom textAlign="center">
             Your Location and Map
           </Typography>
 
-          {/* Assuming you have the UserLocation and UserMap components */}
-          <UserLocation onLocationsUpdate={setLocations} />
+          {/* Pass the userId dynamically */}
+          {userId ? (
+            <>
+              <UserLocation userId={userId} onLocationsUpdate={setLocations} />
 
-          {locations.length > 0 && (
-            <Box sx={{ mt: 2 }}>
-              <Box
-                sx={{ height: "500px", borderRadius: 2, overflow: "hidden" }}
-              >
-                <UserMap locations={locations} />
-              </Box>
-            </Box>
+              {locations.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Box
+                    sx={{
+                      height: "500px",
+                      borderRadius: 2,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <UserMap locations={locations} />
+                  </Box>
+                </Box>
+              )}
+            </>
+          ) : (
+            <Typography variant="body1" textAlign="center">
+              Please log in to view your location and map.
+            </Typography>
           )}
         </Box>
       </Box>
