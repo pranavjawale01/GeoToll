@@ -15,7 +15,7 @@ import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.locationtrackerapp.HelperFunctions.DistanceCalculator
-import com.example.locationtrackerapp.HelperFunctions.Firebase
+import com.example.locationtrackerapp.HelperFunctions.FirebaseHelper
 import com.example.locationtrackerapp.HelperFunctions.SpeedCalculator
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
@@ -33,30 +33,28 @@ class MainActivity : ComponentActivity() {
     private lateinit var speedTextView: TextView
     private lateinit var coordinatesTextView: TextView
     private lateinit var errorTextView: TextView
-    private lateinit var highwayTextView: TextView // TextView to show highway information
-    private lateinit var highwayNameTextView: TextView // TextView to show the highway name
-    private lateinit var totalHighwayDistanceTextView: TextView // TextView for total highway distance
+    private lateinit var highwayTextView: TextView
+    private lateinit var highwayNameTextView: TextView
+    private lateinit var totalHighwayDistanceTextView: TextView
     private lateinit var currentDistanceTimeTextView: TextView
 
     private var user: FirebaseUser? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private var totalDistance = 0.0
-    private var totalHighwayDistance = 0.0 // Variable to track total highway distance
+    private var totalHighwayDistance = 0.0
     private var previousLocation: Location? = null
     private var isTracking = false
     private val REQUEST_CHECK_SETTINGS = 1001
-    private var lastRequestTime: Long = 0 // To throttle requests
-    private val REQUEST_INTERVAL = 10000 // 10 seconds
+    private var lastRequestTime: Long = 0
+    private val REQUEST_INTERVAL = 10000
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Initialize Firebase Auth
         auth = FirebaseAuth.getInstance()
 
-        // Initialize UI elements
         logoutButton = findViewById(R.id.logout)
         nameTextView = findViewById(R.id.name_text_view)
         emailTextView = findViewById(R.id.user_details)
@@ -66,9 +64,9 @@ class MainActivity : ComponentActivity() {
         currentDistanceTimeTextView = findViewById(R.id.current_distance_time_text_view)
         coordinatesTextView = findViewById(R.id.coordinates_text_view)
         errorTextView = findViewById(R.id.error_text_view)
-        highwayTextView = findViewById(R.id.highway_text_view) // Initialize the highway TextView
-        highwayNameTextView = findViewById(R.id.highway_name_text_view) // TextView for highway name
-        totalHighwayDistanceTextView = findViewById(R.id.total_highway_distance_text_view) // TextView for total highway distance
+        highwayTextView = findViewById(R.id.highway_text_view)
+        highwayNameTextView = findViewById(R.id.highway_name_text_view)
+        totalHighwayDistanceTextView = findViewById(R.id.total_highway_distance_text_view)
 
         // Get current user
         user = auth.currentUser
@@ -76,15 +74,24 @@ class MainActivity : ComponentActivity() {
             navigateToLogin()
         } else {
             emailTextView.text = user!!.email
-            Firebase.fetchUserName(user!!.uid) { name ->
+
+            FirebaseHelper.fetchUserName(user!!.uid) { name ->
                 nameTextView.text = name ?: "Name not found"
+            }
+
+            FirebaseHelper.getTotalDistance(user!!.uid) { distance ->
+                totalDistance = distance ?: 0.0
+                distanceTextView.text = String.format("Total Distance: %.2f meters", totalDistance)
+            }
+
+            FirebaseHelper.getTotalHighwayDistance(user!!.uid) { distance ->
+                totalHighwayDistance = distance ?: 0.0
+                totalHighwayDistanceTextView.text = String.format("Total Highway Distance: %.2f meters", totalHighwayDistance)
             }
         }
 
-        // Initialize location services
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        // Location callback
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 locationResult?.locations?.forEach { location ->
@@ -93,7 +100,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Toggle button for tracking location
         toggleButton.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 requestLocationPermission()
@@ -102,7 +108,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Logout button click
         logoutButton.setOnClickListener {
             auth.signOut()
             navigateToLogin()
@@ -112,24 +117,18 @@ class MainActivity : ComponentActivity() {
     private fun updateLocation(location: Location) {
         coordinatesTextView.text = String.format("Lat: %.8f, Long: %.8f", location.latitude, location.longitude)
 
-        // Save latitude and longitude to Firebase
-        Firebase.saveLocation(user!!.uid, location.latitude, location.longitude)
-
-        // Throttle requests to avoid frequent calls
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastRequestTime < REQUEST_INTERVAL) {
-            return // Do not make a new request if it's too soon
+            return
         }
         lastRequestTime = currentTime
 
-        // Calculate distance, speed, and time interval
         previousLocation?.let { previous ->
             val distance = DistanceCalculator.haversine(previous.latitude, previous.longitude, location.latitude, location.longitude)
             totalDistance += distance.toDouble()
             distanceTextView.text = String.format("Total Distance: %.2f meters", totalDistance)
 
-            // Save total distance to Firebase
-            Firebase.saveTotalDistance(user!!.uid, totalDistance)
+            FirebaseHelper.saveTotalDistance(user!!.uid, totalDistance)
 
             // Calculate speed
             val speed = SpeedCalculator.calculateSpeed(previous, location)
@@ -152,6 +151,7 @@ class MainActivity : ComponentActivity() {
                     } else {
                         highwayTextView.text = "\n\nYou are not on a highway."
                     }
+                    FirebaseHelper.saveLocation(user!!.uid, location.latitude, location.longitude, isOnHighway)
                     totalHighwayDistanceTextView.text = String.format("Total Highway Distance: %.2f meters", totalHighwayDistance)
                     highwayNameTextView.text = highwayName ?: "Road name not available"
                 }
@@ -177,8 +177,8 @@ class MainActivity : ComponentActivity() {
 
     private fun checkLocationSettings() {
         val locationRequest = LocationRequest.create().apply {
-            interval = 10000 // Set to 10 seconds
-            fastestInterval = 5000 // Faster interval for updates
+            interval = 3000 // Set to 10 seconds
+            fastestInterval = 1000 // Faster interval for updates
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
 
@@ -215,6 +215,7 @@ class MainActivity : ComponentActivity() {
 
     private fun stopLocationUpdates() {
         isTracking = false
+        previousLocation = null
         fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 
