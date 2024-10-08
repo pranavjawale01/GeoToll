@@ -115,20 +115,20 @@ object HighwayChecker {
 
 
 
-//fun main() {
-//    // Example coordinates (Change this to test with different coordinates)
-//    val coordinates = HighwayChecker.Coordinates(21.455051, 78.205200)
-//
-//    // Call isHighway and handle the callback
-//    HighwayChecker.isHighway(coordinates) { isOnHighway, highwayInfo ->
-//        if (isOnHighway) {
-//            println("Location is on a highway. Highway info: $highwayInfo")
-//        } else {
-//            println("Location is not on a highway.")
-//        }
-//    }
-//
-//    // Sleep the main thread to allow time for the async network call to complete
-//    // You can adjust this delay based on your network speed
-//    Thread.sleep(5000)
-//}
+fun main() {
+    // Example coordinates (Change this to test with different coordinates)
+    val coordinates = HighwayChecker.Coordinates(18.604398, 73.752597)
+
+    // Call isHighway and handle the callback
+    HighwayChecker.isHighway(coordinates) { isOnHighway, highwayInfo ->
+        if (isOnHighway) {
+            println("Location is on a highway. Highway info: $highwayInfo")
+        } else {
+            println("Location is not on a highway.")
+        }
+    }
+
+    // Sleep the main thread to allow time for the async network call to complete
+    // You can adjust this delay based on your network speed
+    Thread.sleep(5000)
+}
