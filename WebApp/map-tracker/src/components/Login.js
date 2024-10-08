@@ -82,28 +82,6 @@ const Login = () => {
         background: "linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)",
       }}
     >
-      {/* Project Icon in the Top Right Corner */}
-      <Box
-        component="img"
-        src={"icon.png"}
-        alt="Project Icon"
-        sx={{
-          width: 50,
-          height: 50,
-          position: "absolute",
-          top: "10px",
-          left: "20px",
-          filter: "brightness(1.5)",
-          borderRadius: "50%",
-          boxShadow: "0 0 15px 5px rgba(255, 255, 255, 0.5)",
-          transition: "all 0.3s ease",
-          "&:hover": {
-            filter: "brightness(1.7)",
-            boxShadow: "0 0 20px 10px rgba(255, 255, 255, 0.7)",
-          },
-        }}
-      />
-
       <Grid
         container
         justifyContent="center"
