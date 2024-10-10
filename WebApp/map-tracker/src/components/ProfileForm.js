@@ -16,6 +16,7 @@ import {
   FormControlLabel,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
+//import Navbar from "./Navbar";
 
 const ProfileForm = () => {
   const [userData, setUserData] = useState({
@@ -162,8 +163,11 @@ const ProfileForm = () => {
   }
 
   return (
+    // <Box >
+    //   <Navbar />
     <Box
       sx={{
+        
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
@@ -343,6 +347,7 @@ const ProfileForm = () => {
         </form>
       </Paper>
     </Box>
+    //</Box>
   );
 };
 
