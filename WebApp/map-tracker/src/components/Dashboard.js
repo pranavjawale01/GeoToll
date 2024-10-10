@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Box, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext"; // Ensure correct context path
-//import Navbar from "./Navbar"; 
 import UserLocation from "./UserLocation";
 import UserMap from "./UserMap";
 
@@ -18,8 +17,6 @@ const Dashboard = () => {
   }, [userId, navigate]);
 
   return (
-    // <Box sx={{ display: "flex" }}>
-    //   <Navbar/>
     <Box sx={{ flexGrow: 1, bgcolor: "background.default", p: 3, mt: 8 }}>
       <Typography variant="h4" gutterBottom textAlign="center">
         Welcome to the Dashboard
@@ -55,12 +52,10 @@ const Dashboard = () => {
         )}
       </Box>
     </Box>
-   // </Box>
   );
 };
 
 export default Dashboard;
-
 
 //############  CODE BEFORE PROFILE   #############
 // import React, { useState } from 'react';

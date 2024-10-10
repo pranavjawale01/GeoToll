@@ -1,5 +1,10 @@
 import React from "react";
-import { BrowserRouter as Router, Route, Routes, useLocation } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import Dashboard from "./components/Dashboard";
@@ -12,7 +17,7 @@ const AppLayout = ({ children }) => {
   const location = useLocation();
 
   // Determine if the current path should have the Navbar
-  const showNavbar = !['/', '/signup'].includes(location.pathname);
+  const showNavbar = !["/", "/signup"].includes(location.pathname);
 
   return (
     <>
