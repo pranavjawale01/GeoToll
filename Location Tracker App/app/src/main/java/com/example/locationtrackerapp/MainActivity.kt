@@ -143,10 +143,10 @@ class MainActivity : ComponentActivity() {
             currentDistanceTimeTextView.text = String.format("Current Distance: %.2f m, Time Interval: %.2f s", distance, timeInterval)
 
             // Check if the current location is on a highway
-            HighwayChecker.isHighway(HighwayChecker.Coordinates(location.latitude, location.longitude)) { result, highwayName ->
+            HighwayCheckerOSM.isHighway(HighwayCheckerOSM.Coordinates(location.latitude, location.longitude)) { result, highwayName ->
                 runOnUiThread {
                     val isOnHighway = when (result) {
-                        5, 6 -> { // Highway detection success based on name/ref
+                        5 -> { // Highway detection success based on name/ref
                             highwayTextView.text = "\n\nYou are on a highway!"
                             totalHighwayDistance += distance.toDouble()
                             FirebaseHelper.saveTotalHighwayDistance(

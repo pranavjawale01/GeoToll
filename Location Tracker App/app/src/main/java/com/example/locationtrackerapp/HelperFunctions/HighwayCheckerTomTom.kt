@@ -3,33 +3,31 @@ import com.google.gson.annotations.SerializedName
 import okhttp3.*
 import java.io.IOException
 
-object HighwayChecker {
+object HighwayCheckerTomTom {
 
-    private const val OVERPASS_API_URL = "http://overpass-api.de/api/interpreter"
+    // Use your TomTom API key here
+    private const val TOMTOM_API_KEY = "YOUR_TOMTOM_API_KEY"
+    private const val TOMTOM_API_URL = "https://api.tomtom.com/search/2/reverseGeocode"
 
     // Data class to represent a geographic location
     data class Coordinates(val latitude: Double, val longitude: Double)
 
     // Data classes for parsing JSON response
-    data class OverpassResponse(val elements: List<Element>)
+    data class TomTomResponse(val addresses: List<Address>)
+    data class Address(
+        @SerializedName("address") val address: AddressDetails
+    )
 
-    data class Element(val tags: Tags)
-
-    data class Tags(
-        @SerializedName("highway") val highway: String? = null,
-        @SerializedName("name") val name: String? = null,
-        @SerializedName("ref") val ref: String? = null
+    data class AddressDetails(
+        @SerializedName("streetName") val streetName: String? = null,
+        @SerializedName("country") val country: String? = null,
+        @SerializedName("municipality") val municipality: String? = null,
+        @SerializedName("countrySubdivision") val countrySubdivision: String? = null
     )
 
     // Function to check if the location is on a highway
     fun isHighway(coordinates: Coordinates, callback: (Int, String?) -> Unit) {
-        val query = """
-            [out:json];
-            way(around:10, ${coordinates.latitude}, ${coordinates.longitude})["highway"];
-            out body;
-        """.trimIndent()
-
-        val requestUrl = "$OVERPASS_API_URL?data=${query.toUrlEncoded()}"
+        val requestUrl = "$TOMTOM_API_URL/${coordinates.latitude},${coordinates.longitude}.json?key=$TOMTOM_API_KEY"
 
         // Print the constructed API link
         println("API Request URL: $requestUrl")
@@ -61,32 +59,20 @@ object HighwayChecker {
                     try {
                         // Use Gson to parse JSON
                         val gson = Gson()
-                        val jsonResponse = gson.fromJson(responseData, OverpassResponse::class.java)
+                        val jsonResponse = gson.fromJson(responseData, TomTomResponse::class.java)
 
-                        // Check if any element has a highway tag
-                        for (element in jsonResponse.elements) {
-                            val tags = element.tags
-
-                            // Check if 'name' contains "highway" or "expressway" (case-insensitive)
-                            tags.name?.let { name ->
-                                val containsHighway = name.lowercase().split(" ").any { it.contains("highway") || it.contains("expressway") }
-                                if (containsHighway) {
-                                    callback(5, name) // 5 -> It is highway based on naming
-                                    return
-                                }
-                            }
-
-                            // Check if 'ref' contains "NH" or "MH" (case-insensitive)
-                            tags.ref?.let { ref ->
-                                val prefixes = setOf("nh", "sh", "mh", "msh", "me")
-                                if (prefixes.any { ref.lowercase().startsWith(it) }) {
-                                    callback(5, ref) // 5 -> It is highway based on references
+                        // Check if any address contains a highway
+                        if (jsonResponse.addresses.isNotEmpty()) {
+                            val addressDetails = jsonResponse.addresses[0].address
+                            addressDetails.streetName?.let { streetName ->
+                                if (streetName.contains("highway", ignoreCase = true) || streetName.contains("expressway", ignoreCase = true)) {
+                                    callback(5, streetName) // 5 -> It is highway based on naming
                                     return
                                 }
                             }
                         }
 
-                        callback(4, null)  // 4 -> It is not a highway
+                        callback(4, null) // 4 -> It is not a highway
                     } catch (e: Exception) {
                         println("Error parsing JSON: ${e.message}")
                         callback(2, null) // 2 -> Parsing error
@@ -111,10 +97,10 @@ object HighwayChecker {
 // Testing purpose only
 fun main() {
     // Example coordinates (Change this to test with different coordinates)
-    val coordinates = HighwayChecker.Coordinates(18.604398, 73.752597)
+    val coordinates = HighwayCheckerTomTom.Coordinates(18.604398, 73.752597)
 
     // Call isHighway and handle the callback
-    HighwayChecker.isHighway(coordinates) { isOnHighway, highwayInfo ->
+    HighwayCheckerTomTom.isHighway(coordinates) { isOnHighway, highwayInfo ->
         if (isOnHighway == 5) {
             println("Location is on a highway. Highway info: $highwayInfo")
         } else {
