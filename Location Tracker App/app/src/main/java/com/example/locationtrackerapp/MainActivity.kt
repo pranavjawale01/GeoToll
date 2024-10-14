@@ -177,8 +177,8 @@ class MainActivity : ComponentActivity() {
 
     private fun checkLocationSettings() {
         val locationRequest = LocationRequest.create().apply {
-            interval = 3000 // Set to 10 seconds
-            fastestInterval = 1000 // Faster interval for updates
+            interval = 10000 // Set to 10 seconds
+            fastestInterval = 5000 // Faster interval for updates
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
 
