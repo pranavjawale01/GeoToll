@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getDatabase, ref, set, get } from "firebase/database";
+import { getDatabase, ref, update, get } from "firebase/database";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import {
   TextField,
@@ -59,7 +59,7 @@ const Login = () => {
         const storedUser = snapshot.val();
 
         // Update the user's login status
-        await set(userRef, {
+        await update(userRef, {
           ...storedUser,
           isLoggedIn: true, // Set this to true on login
         });
