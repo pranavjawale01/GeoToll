@@ -1,11 +1,14 @@
 package com.example.locationtrackerapp.HelperFunctions
 
+import android.icu.text.SimpleDateFormat
 import android.util.Log
 import com.google.firebase.database.*
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
+import java.util.Date
+import java.util.Locale
 
-object Firebase {
+object FirebaseHelper {
 
     private val database: DatabaseReference = Firebase.database.reference
 
@@ -25,35 +28,6 @@ object Firebase {
             })
     }
 
-    // Save data to Firebase (e.g., total distance)
-    fun saveTotalDistance(userId: String, totalDistance: Double) {
-        database.child("location").child(userId).child("totalDistance")
-            .setValue(totalDistance)
-            .addOnSuccessListener {
-                Log.d("FirebaseHelper", "Total distance updated successfully")
-            }
-            .addOnFailureListener { error ->
-                Log.e("FirebaseHelper", "Error updating total distance", error)
-            }
-    }
-
-    // Function to save latitude and longitude to Firebase
-    fun saveLocation(userId: String, latitude: Double, longitude: Double) {
-        val locationData = HashMap<String, Any>()
-        locationData["latitude"] = latitude
-        locationData["longitude"] = longitude
-
-        // Push a new location entry to the "coordinates" node under the user's ID
-        database.child("location").child(userId).child("coordinates").push()
-            .setValue(locationData)
-            .addOnSuccessListener {
-                Log.d("FirebaseHelper", "Location saved successfully: $locationData")
-            }
-            .addOnFailureListener { error ->
-                Log.e("FirebaseHelper", "Error saving location", error)
-            }
-    }
-
     // Function to get total distance from Firebase
     fun getTotalDistance(userId: String, callback: (Double?) -> Unit) {
         database.child("location").child(userId).child("totalDistance")
@@ -68,5 +42,70 @@ object Firebase {
                     callback(null)
                 }
             })
+    }
+
+    // Save total distance to Firebase
+    fun saveTotalDistance(userId: String, totalDistance: Double) {
+        database.child("location").child(userId).child("totalDistance")
+            .setValue(totalDistance)
+            .addOnSuccessListener {
+                Log.d("FirebaseHelper", "Total distance updated successfully")
+            }
+            .addOnFailureListener { error ->
+                Log.e("FirebaseHelper", "Error updating total distance", error)
+            }
+    }
+
+    // Function to get total highway distance from Firebase
+    fun getTotalHighwayDistance(userId: String, callback: (Double?) -> Unit) {
+        database.child("location").child(userId).child("totalHighwayDistance")
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val totalHighwayDistance = snapshot.getValue(Double::class.java)
+                    callback(totalHighwayDistance)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e("FirebaseHelper", "Error fetching total highway distance", error.toException())
+                    callback(null)
+                }
+            })
+    }
+
+    // Save total highway distance to Firebase
+    fun saveTotalHighwayDistance(userId: String, totalHighwayDistance: Double) {
+        database.child("location").child(userId).child("totalHighwayDistance")
+            .setValue(totalHighwayDistance)
+            .addOnSuccessListener {
+                Log.d("FirebaseHelper", "Total highway distance updated successfully")
+            }
+            .addOnFailureListener { error ->
+                Log.e("FirebaseHelper", "Error updating total highway distance", error)
+            }
+    }
+
+    // Save latitude and longitude to Firebase
+    fun saveLocation(userId: String, latitude: Double, longitude: Double, isOnHighway: Boolean) {
+        // Get today's date in "YYYY-MM-DD" format
+        val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+        val currentDate = dateFormatter.format(Date())
+
+        // Get the current time in "HH:mm:ss" format
+        val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+        val currentTime = timeFormatter.format(Date())
+
+        // Save data directly under the time node
+        val timeNode = database.child("location").child(userId).child("coordinates").child(currentDate).child(currentTime)
+
+        // Set the values of latitude, longitude, and isOnHighway directly under the time node
+        timeNode.child("latitude").setValue(latitude)
+        timeNode.child("longitude").setValue(longitude)
+        timeNode.child("isOnHighway").setValue(isOnHighway)
+            .addOnSuccessListener {
+                Log.d("FirebaseHelper", "Location saved successfully: Lat: $latitude, Long: $longitude, Highway: $isOnHighway")
+            }
+            .addOnFailureListener { error ->
+                Log.e("FirebaseHelper", "Error saving location", error)
+            }
     }
 }

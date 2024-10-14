@@ -22,7 +22,7 @@ object HighwayChecker {
     )
 
     // Function to check if the location is on a highway
-    fun isHighway(coordinates: Coordinates, callback: (Boolean, String?) -> Unit) {
+    fun isHighway(coordinates: Coordinates, callback: (Int, String?) -> Unit) {
         val query = """
             [out:json];
             way(around:10, ${coordinates.latitude}, ${coordinates.longitude})["highway"];
@@ -42,13 +42,13 @@ object HighwayChecker {
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 println("Error making API request: ${e.message}")
-                callback(false, null) // On failure, assume it's not a highway
+                callback(0, null) // 0 -> API calling failure
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
                     println("API request failed: ${response.message}")
-                    callback(false, null) // On error, return false
+                    callback(1, null) // 1 -> API request failed
                     return
                 }
 
@@ -71,7 +71,7 @@ object HighwayChecker {
                             tags.name?.let { name ->
                                 val containsHighway = name.lowercase().split(" ").any { it.contains("highway") || it.contains("expressway") }
                                 if (containsHighway) {
-                                    callback(true, name) // Pass back the highway name
+                                    callback(5, name) // 5 -> It is highway based on naming
                                     return
                                 }
                             }
@@ -80,21 +80,20 @@ object HighwayChecker {
                             tags.ref?.let { ref ->
                                 val prefixes = setOf("nh", "sh", "mh", "msh", "me")
                                 if (prefixes.any { ref.lowercase().startsWith(it) }) {
-                                    callback(true, ref) // Pass back the highway ref
+                                    callback(6, ref) // 6 -> It is highway based on references
                                     return
                                 }
                             }
                         }
 
-                        // If no matching highway found
-                        callback(false, null)
+                        callback(4, null)  // 4 -> It is not a highway
                     } catch (e: Exception) {
                         println("Error parsing JSON: ${e.message}")
-                        callback(false, null) // Handle parsing error
+                        callback(2, null) // 2 -> Parsing error
                     }
                 } ?: run {
                     println("No response body, returning false")
-                    callback(false, null) // No response body, return false
+                    callback(3, null) // 3 -> No response failure
                 }
             }
         })
@@ -109,24 +108,28 @@ object HighwayChecker {
     }
 }
 
+// Testing purpose only
+fun main() {
+    // Example coordinates (Change this to test with different coordinates)
+    val coordinates = HighwayChecker.Coordinates(18.604398, 73.752597)
 
+    // Call isHighway and handle the callback
+    HighwayChecker.isHighway(coordinates) { isOnHighway, highwayInfo ->
+        if (isOnHighway == 5 || isOnHighway == 6) {
+            println("Location is on a highway. Highway info: $highwayInfo")
+        } else {
+            when (isOnHighway) {
+                0 -> println("API calling failure.")
+                1 -> println("API request failed.")
+                2 -> println("Error parsing JSON response.")
+                3 -> println("No response from API.")
+                4 -> println("Location is not on a highway.")
+                else -> println("Unexpected result.")
+            }
+        }
+    }
 
-// Testing purpose only  -- don't remove the commented code
-//
-//fun main() {
-//    // Example coordinates (Change this to test with different coordinates)
-//    val coordinates = HighwayChecker.Coordinates(21.455051, 78.205200)
-//
-//    // Call isHighway and handle the callback
-//    HighwayChecker.isHighway(coordinates) { isOnHighway, highwayInfo ->
-//        if (isOnHighway) {
-//            println("Location is on a highway. Highway info: $highwayInfo")
-//        } else {
-//            println("Location is not on a highway.")
-//        }
-//    }
-//
-//    // Sleep the main thread to allow time for the async network call to complete
-//    // You can adjust this delay based on your network speed
-//    Thread.sleep(5000)
-//}
+    // Sleep the main thread to allow time for the async network call to complete
+    // You can adjust this delay based on your network speed
+    // Thread.sleep(5000)
+}
