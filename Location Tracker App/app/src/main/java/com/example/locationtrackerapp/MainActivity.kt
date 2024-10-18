@@ -91,9 +91,14 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // This is a method that creates an instance of FusedLocationProviderClient.
+        // It is used to request location updates, get the last known location, etc.
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        locationCallback = object : LocationCallback() {
+
+        // This function is overriding the onLocationResult() method of LocationCallback. Whenever new location data is available,
+        // this method is called automatically by the system.
+        locationCallback = object : LocationCallback() {    // LocationCallback is an inbuilt class in the Fused Location Provider API (part of Google Play services). It is used to receive location updates asynchronously
             override fun onLocationResult(locationResult: LocationResult) {
                 locationResult?.locations?.forEach { location ->
                     updateLocation(location)
