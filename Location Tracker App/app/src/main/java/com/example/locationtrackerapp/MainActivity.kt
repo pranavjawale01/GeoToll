@@ -264,6 +264,7 @@ class MainActivity : ComponentActivity() {
         if (isTracking) {
             fusedLocationClient.removeLocationUpdates(locationCallback)
             isTracking = false
+            previousLocation = null
         }
     }
 }
