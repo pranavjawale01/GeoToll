@@ -84,9 +84,77 @@ object FirebaseHelper {
             }
     }
 
+    // Save today's total distance to Firebase
+    fun saveTodayTotalDistance(userId: String, todayTotalDistance: Double) {
+        val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+        val currentDate = dateFormatter.format(Date())
+
+        database.child("location").child(userId).child("coordinates")
+            .child(currentDate).child("todayTotalDistance").setValue(todayTotalDistance)
+            .addOnSuccessListener {
+                Log.d("FirebaseHelper", "Today's total distance updated successfully")
+            }
+            .addOnFailureListener { error ->
+                Log.e("FirebaseHelper", "Error updating today's total distance", error)
+            }
+    }
+
+    // Save today's total highway distance to Firebase
+    fun saveTodayTotalHighwayDistance(userId: String, todayTotalHighwayDistance: Double) {
+        val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+        val currentDate = dateFormatter.format(Date())
+
+        database.child("location").child(userId).child("coordinates")
+            .child(currentDate).child("todayTotalHighwayDistance").setValue(todayTotalHighwayDistance)
+            .addOnSuccessListener {
+                Log.d("FirebaseHelper", "Today's total highway distance updated successfully")
+            }
+            .addOnFailureListener { error ->
+                Log.e("FirebaseHelper", "Error updating today's total highway distance", error)
+            }
+    }
+
+    // Get today's total distance from Firebase
+    fun getTodayTotalDistance(userId: String, callback: (Double?) -> Unit) {
+        val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+        val currentDate = dateFormatter.format(Date())
+
+        database.child("location").child(userId).child("coordinates")
+            .child(currentDate).child("todayTotalDistance").addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val todayTotalDistance = snapshot.getValue(Double::class.java)
+                    callback(todayTotalDistance)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e("FirebaseHelper", "Error fetching today's total distance", error.toException())
+                    callback(null)
+                }
+            })
+    }
+
+    // Get today's total highway distance from Firebase
+    fun getTodayTotalHighwayDistance(userId: String, callback: (Double?) -> Unit) {
+        val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+        val currentDate = dateFormatter.format(Date())
+
+        database.child("location").child(userId).child("coordinates")
+            .child(currentDate).child("todayTotalHighwayDistance").addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val todayTotalHighwayDistance = snapshot.getValue(Double::class.java)
+                    callback(todayTotalHighwayDistance)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e("FirebaseHelper", "Error fetching today's total highway distance", error.toException())
+                    callback(null)
+                }
+            })
+    }
+
     // Save latitude and longitude to Firebase
     fun saveLocation(userId: String, latitude: Double, longitude: Double, isOnHighway: Boolean) {
-        // Get today's date in "YYYY-MM-DD" format
+        // Get today's date in "dd-MM-yyyy" format
         val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
         val currentDate = dateFormatter.format(Date())
 

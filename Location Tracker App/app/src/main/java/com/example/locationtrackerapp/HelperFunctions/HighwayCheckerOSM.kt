@@ -128,7 +128,7 @@ fun main() {
                     1 -> println("API request failed for (${coordinates.latitude}, ${coordinates.longitude}).")
                     2 -> println("Error parsing JSON response for (${coordinates.latitude}, ${coordinates.longitude}).")
                     3 -> println("No response from API for (${coordinates.latitude}, ${coordinates.longitude}).")
-                    4 -> println("Location (${coordinates.latitude}, ${coordinates.longitude}) is not on a highway or expressway. Location info: $highwayInfo")
+                    4 -> println("Location (${coordinates.latitude}, ${coordinates.longitude}) is not on a highway. Location info: $highwayInfo")
                     else -> println("Unexpected result for (${coordinates.latitude}, ${coordinates.longitude}).")
                 }
             }
