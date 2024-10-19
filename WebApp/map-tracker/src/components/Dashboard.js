@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Box, Typography, MenuItem, FormControl, Select, InputLabel } from "@mui/material";
+import {
+  Box,
+  Typography,
+  MenuItem,
+  FormControl,
+  Select,
+  InputLabel,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import UserLocation from "./UserLocation";
@@ -8,12 +15,13 @@ import UserMap from "./UserMap";
 const Dashboard = () => {
   const [locations, setLocations] = useState([]);
   const [availableDates, setAvailableDates] = useState([]);
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState("");
   const [isDateManuallySelected, setIsDateManuallySelected] = useState(false); // New flag to track manual date selection
   const { userId } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log("User ID:", userId); // Log user ID
     if (!userId) {
       navigate("/"); // Navigate to login if user is not authenticated
     }
@@ -45,7 +53,7 @@ const Dashboard = () => {
 
         {userId ? (
           <>
-            <FormControl sx={{ mb: 2, width: '100%' }}>
+            <FormControl sx={{ mb: 2, width: "100%" }}>
               <InputLabel>Select Date</InputLabel>
               <Select
                 value={selectedDate}
@@ -92,8 +100,6 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
-
 
 //############  CODE BEFORE PROFILE   #############
 // import React, { useState } from 'react';

@@ -2,7 +2,12 @@ import { useEffect } from "react";
 import { ref, onValue } from "firebase/database";
 import { database } from "../firebase"; // Import the initialized database
 
-const UserLocation = ({ userId, selectedDate, onLocationsUpdate, onAvailableDatesUpdate }) => {
+const UserLocation = ({
+  userId,
+  selectedDate,
+  onLocationsUpdate,
+  onAvailableDatesUpdate,
+}) => {
   useEffect(() => {
     const locationRef = ref(database, `location/${userId}/coordinates`);
 
@@ -10,11 +15,11 @@ const UserLocation = ({ userId, selectedDate, onLocationsUpdate, onAvailableDate
     onValue(locationRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
-        
+
         // Ensure that data exists and is valid before proceeding
-        if (data && typeof data === 'object') {
+        if (data && typeof data === "object") {
           const availableDates = Object.keys(data);
-          
+
           // Update available dates in Dashboard
           onAvailableDatesUpdate(availableDates);
 
@@ -25,7 +30,7 @@ const UserLocation = ({ userId, selectedDate, onLocationsUpdate, onAvailableDate
             const timeEntries = data[selectedDate];
 
             // Check if timeEntries is a valid object
-            if (timeEntries && typeof timeEntries === 'object') {
+            if (timeEntries && typeof timeEntries === "object") {
               Object.keys(timeEntries).forEach((timeKey) => {
                 const point = timeEntries[timeKey];
                 if (point && point.latitude && point.longitude) {
@@ -50,7 +55,6 @@ const UserLocation = ({ userId, selectedDate, onLocationsUpdate, onAvailableDate
 };
 
 export default UserLocation;
-
 
 // import { useEffect } from "react";
 

@@ -1,6 +1,8 @@
-import React from "react";
-import { MapContainer, TileLayer, Marker, Polyline } from "react-leaflet";
+import React, { useEffect } from "react";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import "leaflet-arrowheads";
 
 const UserMap = ({ locations }) => {
   if (!locations || locations.length === 0) return null;
@@ -8,18 +10,74 @@ const UserMap = ({ locations }) => {
   const startLocation = locations[0];
   const endLocation = locations[locations.length - 1];
 
-  // Separate locations based on whether they are on the highway or not
-  const highwayPositions = [];
-  const serviceRoadPositions = [];
+  // Function to split locations into segments based on highway status
+  const getPolylineSegments = () => {
+    const segments = [];
+    let currentSegment = [];
+    let currentStatus = locations[0].isOnHighway;
 
-  locations.forEach((location) => {
-    const position = [location.latitude, location.longitude];
-    if (location.isOnHighway) {
-      highwayPositions.push(position);
-    } else {
-      serviceRoadPositions.push(position);
+    locations.forEach((location, index) => {
+      const position = [location.latitude, location.longitude];
+
+      // Always push the current position to the segment
+      currentSegment.push(position);
+
+      // Check if the next location status changes
+      if (
+        index < locations.length - 1 &&
+        locations[index + 1].isOnHighway !== currentStatus
+      ) {
+        // When status changes, push the current segment and start a new one
+        segments.push({
+          positions: currentSegment,
+          isOnHighway: currentStatus,
+        });
+        currentSegment = [position]; // Start the new segment with the last point to ensure continuity
+        currentStatus = locations[index + 1].isOnHighway;
+      }
+    });
+
+    // Push the last segment
+    if (currentSegment.length > 0) {
+      segments.push({ positions: currentSegment, isOnHighway: currentStatus });
     }
-  });
+
+    return segments;
+  };
+
+  const polylineSegments = getPolylineSegments();
+
+  // Custom hook to add arrowheads to polylines
+  const AddArrows = ({ segments }) => {
+    const map = useMap();
+
+    useEffect(() => {
+      segments.forEach((segment) => {
+        const polyline = L.polyline(segment.positions, {
+          color: segment.isOnHighway ? "blue" : "red", // Highway or service road
+        }).addTo(map);
+
+        // Add arrowheads to the polyline
+        polyline.arrowheads({
+          frequency: "200px", // distance between arrows
+          size: "8px", // arrow size
+          fill: true,
+          color: segment.isOnHighway ? "blue" : "red",
+        });
+      });
+
+      return () => {
+        // Clear the map when the component unmounts or updates
+        map.eachLayer((layer) => {
+          if (layer instanceof L.Polyline) {
+            map.removeLayer(layer);
+          }
+        });
+      };
+    }, [map, segments]);
+
+    return null;
+  };
 
   return (
     <MapContainer
@@ -32,24 +90,19 @@ const UserMap = ({ locations }) => {
         attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
       />
 
+      {/* Start and end markers */}
       <Marker position={[startLocation.latitude, startLocation.longitude]} />
       <Marker position={[endLocation.latitude, endLocation.longitude]} />
 
-      {/* Highway route in blue */}
-      {highwayPositions.length > 0 && (
-        <Polyline positions={highwayPositions} color="blue" />
-      )}
-
-      {/* Service road route in red */}
-      {serviceRoadPositions.length > 0 && (
-        <Polyline positions={serviceRoadPositions} color="red" />
-      )}
+      {/* Draw polylines with arrows */}
+      <AddArrows segments={polylineSegments} />
     </MapContainer>
   );
 };
 
 export default UserMap;
 
+///////////////////////////////////////////////
 // import React from "react";
 // import { MapContainer, TileLayer, Marker, Polyline } from "react-leaflet";
 // import "leaflet/dist/leaflet.css";
