@@ -9,17 +9,15 @@
     android:background="@android:color/white"
     tools:context=".MainActivity">
 
-    <!-- App Title -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Location Tracker"
         android:textSize="24sp"
         android:textStyle="bold"
-        android:textColor="@android:color/holo_blue_dark"
-        android:layout_marginBottom="24dp"/>
+        android:textColor="#3F51B5"
+        android:layout_marginBottom="24dp" />
 
-    <!-- TextView to display the user's name -->
     <TextView
         android:id="@+id/name_text_view"
         android:layout_width="wrap_content"
@@ -28,9 +26,8 @@
         android:textSize="20sp"
         android:textStyle="bold"
         android:layout_marginBottom="8dp"
-        android:textColor="@android:color/black" />
+        android:textColor="#212121" />
 
-    <!-- TextView to display user details (e.g., email) -->
     <TextView
         android:id="@+id/user_details"
         android:layout_width="wrap_content"
@@ -38,9 +35,8 @@
         android:text="Email"
         android:textSize="16sp"
         android:layout_marginBottom="16dp"
-        android:textColor="@android:color/darker_gray" />
+        android:textColor="#757575" />
 
-    <!-- Toggle button for tracking -->
     <ToggleButton
         android:id="@+id/toggle_button"
         android:layout_width="wrap_content"
@@ -50,19 +46,8 @@
         android:textOff="Start Tracking"
         android:layout_marginBottom="16dp"
         android:background="@drawable/toggle_background"
-        android:textColor="@android:color/white" />
+        android:textColor="#FFFFFF" />
 
-    <!-- TextView to display total distance -->
-    <TextView
-        android:id="@+id/distance_text_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Total Distance: 0.00 meters"
-        android:textSize="18sp"
-        android:layout_marginTop="16dp"
-        android:textColor="@android:color/holo_blue_dark" />
-
-    <!-- TextView to display speed in kmph -->
     <TextView
         android:id="@+id/speed_text_view"
         android:layout_width="wrap_content"
@@ -70,20 +55,17 @@
         android:text="Speed: 0.0 km/h"
         android:textSize="16sp"
         android:layout_marginTop="8dp"
-        />
+        android:textColor="#1976D2" />
 
     <TextView
         android:id="@+id/current_distance_time_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Current Distance: ??? Time Interval: ???"
-        android:textColor="#000000"
         android:textSize="16sp"
-        android:layout_marginTop="8dp"
-        android:layout_below="@id/speed_text_view" />
+        android:textColor="#000000"
+        android:layout_marginTop="8dp" />
 
-
-    <!-- TextView to display real-time coordinates -->
     <TextView
         android:id="@+id/coordinates_text_view"
         android:layout_width="wrap_content"
@@ -91,9 +73,96 @@
         android:text="Lat: 0.000000, Long: 0.000000"
         android:textSize="18sp"
         android:layout_marginTop="8dp"
-        android:textColor="@android:color/holo_green_dark" />
+        android:textColor="#4CAF50" />
 
-    <!-- Button for logout -->
+    <TextView
+        android:id="@+id/highway_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Highway Status"
+        android:textSize="16sp"
+        android:layout_marginTop="8dp"
+        android:textColor="#FF9800" />
+
+    <TextView
+        android:id="@+id/highway_name_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Highway Name"
+        android:textSize="16sp"
+        android:layout_marginTop="4dp"
+        android:textColor="#FF5722" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#E0E0E0"
+        android:padding="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:id="@+id/today_total_distance_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Today's Total Distance: 0.00 meters"
+            android:textSize="16sp"
+            android:textColor="#000000" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#E0E0E0"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:id="@+id/today_total_highway_distance_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Today's Total Highway Distance: 0.00 meters"
+            android:textSize="16sp"
+            android:textColor="#000000" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp">
+
+        <TextView
+            android:id="@+id/total_distance_km_text_view"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Total Distance: 0.00 km"
+            android:textSize="18sp"
+            android:gravity="center"
+            android:background="#FFEB3B"
+            android:padding="8dp"
+            android:textColor="#000000" />
+
+        <TextView
+            android:id="@+id/total_highway_distance_km_text_view"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Total Highway Distance: 0.00 km"
+            android:textSize="18sp"
+            android:gravity="center"
+            android:background="#8BC34A"
+            android:padding="8dp"
+            android:textColor="#000000" />
+    </LinearLayout>
+
     <Button
         android:id="@+id/logout"
         android:layout_width="wrap_content"
@@ -102,37 +171,14 @@
         android:textColor="@android:color/white"
         android:background="@drawable/rounded_button"
         android:layout_marginTop="32dp"
-        android:padding="12dp" />
+        android:padding="12dp"
+        android:backgroundTint="#F44336" />
 
     <TextView
         android:id="@+id/error_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@android:color/holo_red_dark"
+        android:textColor="#F44336"
         android:layout_marginTop="16dp"
         android:visibility="gone" />
-
-    <TextView
-        android:id="@+id/highway_text_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="\n\nHighway Status"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/highway_name_text_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Highway Name"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/total_highway_distance_text_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Total Highway Distance: 0.00 meters"
-        android:textSize="16sp" />
-
-
-
 </LinearLayout>
