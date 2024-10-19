@@ -2,36 +2,54 @@ import { useEffect } from "react";
 import { ref, onValue } from "firebase/database";
 import { database } from "../firebase"; // Import the initialized database
 
-const UserLocation = ({ userId, onLocationsUpdate }) => {
+const UserLocation = ({
+  userId,
+  selectedDate,
+  onLocationsUpdate,
+  onAvailableDatesUpdate,
+}) => {
   useEffect(() => {
-    // Reference to the user's location data in the database
     const locationRef = ref(database, `location/${userId}/coordinates`);
 
-    // Listen for real-time updates
+    // Listen for real-time updates to get available dates
     onValue(locationRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
-        const dateKeys = Object.keys(data);
-        const latestDate = dateKeys[dateKeys.length - 1]; // Get the most recent date
 
-        const newLocations = [];
+        // Ensure that data exists and is valid before proceeding
+        if (data && typeof data === "object") {
+          const availableDates = Object.keys(data);
 
-        // Process data for the latest date and extract time entries
-        const timeEntries = data[latestDate]; // Access time-based entries for the latest date
-        Object.keys(timeEntries).forEach((timeKey) => {
-          const point = timeEntries[timeKey];
-          newLocations.push({
-            latitude: point.latitude,
-            longitude: point.longitude,
-            isOnHighway: point.isOnHighway,
-          });
-        });
+          // Update available dates in Dashboard
+          onAvailableDatesUpdate(availableDates);
 
-        // Pass updated locations to the parent component
-        onLocationsUpdate(newLocations);
+          if (selectedDate && data[selectedDate]) {
+            const newLocations = [];
+
+            // Process location data for the selected date
+            const timeEntries = data[selectedDate];
+
+            // Check if timeEntries is a valid object
+            if (timeEntries && typeof timeEntries === "object") {
+              Object.keys(timeEntries).forEach((timeKey) => {
+                const point = timeEntries[timeKey];
+                if (point && point.latitude && point.longitude) {
+                  newLocations.push({
+                    latitude: point.latitude,
+                    longitude: point.longitude,
+                    isOnHighway: point.isOnHighway,
+                  });
+                }
+              });
+
+              // Pass updated locations to the parent component
+              onLocationsUpdate(newLocations);
+            }
+          }
+        }
       }
     });
-  }, [userId, onLocationsUpdate]);
+  }, [userId, selectedDate, onLocationsUpdate, onAvailableDatesUpdate]);
 
   return null; // No UI component here, just passing the data
 };

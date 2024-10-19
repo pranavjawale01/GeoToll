@@ -38,7 +38,11 @@
    ```bash
    npm install @mui/icons-material
    ```
-11. **Test the Web App**
+11. **Install leaflet-arrowheads**
+   ```bash
+   npm install leaflet-arrowheads
+   ```
+12. **Test the Web App**
    ```bash
    npm start
    ```
