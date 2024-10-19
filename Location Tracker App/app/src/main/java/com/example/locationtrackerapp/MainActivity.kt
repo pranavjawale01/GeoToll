@@ -168,7 +168,7 @@ class MainActivity : ComponentActivity() {
                 runOnUiThread {
                     val isOnHighway = when (result) {
                         5 -> {
-                            highwayTextView.text = "\n\nYou are on a highway!"
+                            highwayTextView.text = "\nYou are on a highway!"
                             todayTotalHighwayDistance += distance.toDouble()
                             totalHighwayDistanceKm += distance.toDouble()
 
@@ -178,27 +178,32 @@ class MainActivity : ComponentActivity() {
                             true
                         }
                         4 -> {
-                            highwayTextView.text = "\n\nYou are not on a highway."
+                            highwayTextView.text = "\nYou are not on a highway."
                             false
                         }
 
                         0 -> {
-                            highwayTextView.text = "\n\nAPI failure."
+                            highwayTextView.text = "\nAPI failure."
                             false
                         }
 
                         1 -> {
-                            highwayTextView.text = "\n\nRequest failed."
+                            highwayTextView.text = "\nRequest failed."
                             false
                         }
 
                         2 -> {
-                            highwayTextView.text = "\n\nParsing error."
+                            highwayTextView.text = "\nParsing error."
+                            false
+                        }
+
+                        3 -> {
+                            highwayTextView.text = "\nNo response body."
                             false
                         }
 
                         else -> {
-                            highwayTextView.text = "\n\nUnknown response."
+                            highwayTextView.text = "\nUnknown response."
                             false
                         }
                     }
