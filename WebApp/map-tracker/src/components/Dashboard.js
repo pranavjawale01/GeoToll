@@ -118,7 +118,7 @@ const Dashboard = () => {
             </Box>
 
             {/* Right container for distance info */}
-            <Box sx={{ mr: 1, mt: 2, }}>
+            <Box sx={{ mr: 1, mt: 2 }}>
               <Box
                 sx={{
                   backgroundColor: "#e3f2fd",
@@ -131,8 +131,7 @@ const Dashboard = () => {
                     transform: "scale(1.02)", // Slightly scale up on hover
                     boxShadow: 4, // Increase shadow on hover
                   },
-                  height:240,
-                  
+                  height: 240,
                 }}
               >
                 <TodayDistanceInfo
@@ -154,7 +153,7 @@ const Dashboard = () => {
                     transform: "scale(1.02)", // Slightly scale up on hover
                     boxShadow: 4, // Increase shadow on hover
                   },
-                  height:240,
+                  height: 240,
                 }}
               >
                 <TotalDistanceInfo userId={userId} />

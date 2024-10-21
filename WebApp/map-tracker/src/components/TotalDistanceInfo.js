@@ -19,7 +19,7 @@ const TotalDistanceInfo = ({ userId }) => {
 
           if (data) {
             // Directly access totalDistance and totalHighwayDistance
-            const totalDistance = data.totalDistance || 0; 
+            const totalDistance = data.totalDistance || 0;
             const totalHighwayDistance = data.totalHighwayDistance || 0;
 
             // Set state with the fetched values
