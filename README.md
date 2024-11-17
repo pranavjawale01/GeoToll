@@ -44,3 +44,7 @@ project_root/
 │
 └── backup branch
 ```
+
+## Collaborators
+
+**[Pranav Jawale](https://github.com/pranavjawale01)** • **[Omkar Aher](https://github.com/OmkarAher45687)** • **[Srushti Bonde](https://github.com/Srushti-Bonde)** • **[Dhruv Gidwani](https://github.com/Dhruv-Gidwani)**
