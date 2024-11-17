@@ -7,12 +7,17 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
 import android.os.Looper
+import android.os.Looper.*
 import android.widget.Button
 import android.widget.TextView
 import android.widget.ToggleButton
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.work.Data
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import com.example.locationtrackerapp.HelperFunctions.DailyResetWorker
 import com.example.locationtrackerapp.HelperFunctions.DistanceCalculator
 import com.example.locationtrackerapp.HelperFunctions.FirebaseHelper
 import com.example.locationtrackerapp.HelperFunctions.SpeedCalculator
@@ -20,6 +25,8 @@ import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import java.util.Calendar
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
 
@@ -44,12 +51,15 @@ class MainActivity : ComponentActivity() {
     private lateinit var locationCallback: LocationCallback
     private var totalHighwayDistanceKm = 0.0
     private var totalDistanceKm = 0.0
-    private var todayTotalDistance = 0.0
-    private var todayTotalHighwayDistance = 0.0
-    private var previousLocation: Location? = null
     private var isTracking = false
     private val REQUEST_CHECK_SETTINGS = 1001
-    private val REQUEST_INTERVAL = 10000
+
+    // Companion object to store the previous location, accessible by other classes
+    public companion object {
+        var previousLocation: Location? = null
+        var todayTotalDistance: Double = 0.0
+        var todayTotalHighwayDistance: Double = 0.0
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,7 +122,7 @@ class MainActivity : ComponentActivity() {
         // Set up location callback
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
-                locationResult?.locations?.forEach { location ->
+                locationResult.locations?.forEach { location ->
                     updateLocation(location)
                 }
             }
@@ -144,6 +154,9 @@ class MainActivity : ComponentActivity() {
             auth.signOut()
             navigateToLogin()
         }
+
+        // Schedule the daily reset of distances at midnight
+        scheduleDailyResetWorker()
     }
 
     private fun updateLocation(location: Location) {
@@ -271,5 +284,32 @@ class MainActivity : ComponentActivity() {
             isTracking = false
             previousLocation = null
         }
+    }
+
+    private fun scheduleDailyResetWorker() {
+        // Set the trigger to fire at 11:59 PM
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = System.currentTimeMillis()
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 50)
+        }
+
+        val currentTime = System.currentTimeMillis()
+        val initialDelay = calendar.timeInMillis - currentTime
+
+        // Create Data object to pass today's distance values
+        val dailyData = Data.Builder()
+            .putDouble("todayTotalDistance", todayTotalDistance)
+            .putDouble("todayTotalHighwayDistance", todayTotalHighwayDistance)
+            .build()
+
+        // Schedule the daily reset worker with input data
+        val dailyWorkRequest = OneTimeWorkRequestBuilder<DailyResetWorker>()
+            .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+            .setInputData(dailyData)
+            .build()
+
+        WorkManager.getInstance(this).enqueue(dailyWorkRequest)
     }
 }
