@@ -7,13 +7,14 @@ import "leaflet-arrowheads";
 const UserMap = ({ locations }) => {
   if (!locations || locations.length === 0) return null;
 
+  // Set the start and end locations for the route
   const startLocation = locations[0];
   const endLocation = locations[locations.length - 1];
 
   // Function to split locations into segments based on highway status
   const getPolylineSegments = () => {
-    const segments = [];
-    let currentSegment = [];
+    const segments = []; // Array to hold segments of polyline
+    let currentSegment = []; // Array to hold the current segment's locations
     let currentStatus = locations[0].isOnHighway;
 
     locations.forEach((location, index) => {
@@ -42,7 +43,7 @@ const UserMap = ({ locations }) => {
       segments.push({ positions: currentSegment, isOnHighway: currentStatus });
     }
 
-    return segments;
+    return segments; // Return the array of polyline segments
   };
 
   const polylineSegments = getPolylineSegments();

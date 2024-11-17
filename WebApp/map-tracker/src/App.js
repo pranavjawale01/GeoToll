@@ -12,11 +12,11 @@ import ProfileForm from "./components/ProfileForm";
 import { AuthProvider } from "./context/AuthContext"; // Import AuthProvider
 import Navbar from "./components/Navbar";
 
-// Create a wrapper component to conditionally render the Navbar
+// Created a wrapper component to conditionally render the Navbar
 const AppLayout = ({ children }) => {
   const location = useLocation();
 
-  // Determine if the current path should have the Navbar
+  // Navbar is not displayed on the login and signup pages.
   const showNavbar = !["/", "/signup"].includes(location.pathname);
 
   return (

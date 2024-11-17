@@ -18,12 +18,12 @@ const Dashboard = () => {
   const [locations, setLocations] = useState([]);
   const [availableDates, setAvailableDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
-  const [isDateManuallySelected, setIsDateManuallySelected] = useState(false); // New flag to track manual date selection
+  const [isDateManuallySelected, setIsDateManuallySelected] = useState(false);
   const { userId } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log("User ID:", userId); // Log user ID
+    //console.log("User ID:", userId);  //Log user ID
     if (!userId) {
       navigate("/"); // Navigate to login if user is not authenticated
     }

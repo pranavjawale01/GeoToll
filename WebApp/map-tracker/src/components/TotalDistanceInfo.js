@@ -15,19 +15,19 @@ const TotalDistanceInfo = ({ userId }) => {
       onValue(totalDistanceRef, (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.val();
-          console.log("Fetched Data:", data); // Log fetched data
+          //console.log("Fetched Data:", data); // Log fetched data
 
           if (data) {
             // Directly access totalDistance and totalHighwayDistance
             const totalDistance = data.totalDistance || 0;
             const totalHighwayDistance = data.totalHighwayDistance || 0;
 
-            // Set state with the fetched values
+            // Update the state with the fetched values
             setTotalDistance(totalDistance);
             setTotalHighwayDistance(totalHighwayDistance);
           }
         } else {
-          console.log("No data available for this user."); // Log when no data exists
+          //console.log("No data available for this user."); // Log when no data exists
           setTotalDistance(0);
           setTotalHighwayDistance(0);
         }

@@ -41,9 +41,9 @@ const TodayDistanceInfo = ({ userId, selectedDate }) => {
   return (
     <div>
       <h3>Today's Distance Traveled</h3>
-      <p>Total Distance Today: {todayTotalDistance.toFixed(2)} meters</p>
+      <p>Total Distance (Today): {todayTotalDistance.toFixed(2)} meters</p>
       <p>
-        Total Highway Distance Today: {todayTotalHighwayDistance.toFixed(2)}{" "}
+        Total Highway Distance (Today): {todayTotalHighwayDistance.toFixed(2)}{" "}
         meters
       </p>
     </div>
