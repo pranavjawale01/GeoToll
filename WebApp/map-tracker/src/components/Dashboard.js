@@ -11,17 +11,19 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import UserLocation from "./UserLocation";
 import UserMap from "./UserMap";
+import TodayDistanceInfo from "./TodayDistanceInfo";
+import TotalDistanceInfo from "./TotalDistanceInfo";
 
 const Dashboard = () => {
   const [locations, setLocations] = useState([]);
   const [availableDates, setAvailableDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
-  const [isDateManuallySelected, setIsDateManuallySelected] = useState(false); // New flag to track manual date selection
+  const [isDateManuallySelected, setIsDateManuallySelected] = useState(false);
   const { userId } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log("User ID:", userId); // Log user ID
+    //console.log("User ID:", userId);  //Log user ID
     if (!userId) {
       navigate("/"); // Navigate to login if user is not authenticated
     }
@@ -46,19 +48,32 @@ const Dashboard = () => {
         Welcome to the Dashboard
       </Typography>
 
-      <Box>
-        <Typography variant="h6" gutterBottom textAlign="center">
-          Your Location and Map
-        </Typography>
-
-        {userId ? (
-          <>
-            <FormControl sx={{ mb: 2, width: "100%" }}>
+      {userId ? (
+        <>
+          <Box
+            sx={{
+              flexGrow: 1, // Add shadow
+              transition: "transform 0.2s, box-shadow 0.2s", // Smooth transition for hover
+              mt: 1, // Add margin top to separate the two boxes
+              "&:hover": {
+                transform: "scale(1.02)", // Slightly scale up on hover
+                // Increase shadow on hover
+              },
+            }}
+          >
+            <FormControl sx={{ mx: 7, width: "96%" }}>
               <InputLabel>Select Date</InputLabel>
               <Select
                 value={selectedDate}
                 onChange={handleDateChange} // Update the selected date on user selection
                 label="Select Date"
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 200, // Limit dropdown height to avoid it being too long
+                    },
+                  },
+                }}
               >
                 {availableDates.map((date) => (
                   <MenuItem key={date} value={date}>
@@ -67,34 +82,90 @@ const Dashboard = () => {
                 ))}
               </Select>
             </FormControl>
+          </Box>
 
-            <UserLocation
-              userId={userId}
-              selectedDate={selectedDate}
-              onLocationsUpdate={setLocations}
-              onAvailableDatesUpdate={setAvailableDates}
-            />
-
-            {locations.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Box
-                  sx={{
-                    height: "500px",
-                    borderRadius: 2,
-                    overflow: "hidden",
-                  }}
-                >
-                  <UserMap locations={locations} />
+          <Box sx={{ display: "flex" }}>
+            {/* Left container for the map */}
+            <Box sx={{ flex: 1, mr: 2 }}>
+              {/* Add margin to separate the two columns */}
+              <UserLocation
+                userId={userId}
+                selectedDate={selectedDate}
+                onLocationsUpdate={setLocations}
+                onAvailableDatesUpdate={setAvailableDates}
+              />
+              {locations.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Box
+                    sx={{
+                      ml: 7,
+                      width: "90%",
+                      height: "500px",
+                      borderRadius: 2,
+                      overflow: "hidden",
+                      transition: "transform 0.2s, box-shadow 0.2s", // Smooth transition for hover
+                      mt: 1, // Add margin top to separate the two boxes
+                      "&:hover": {
+                        transform: "scale(1.02)", // Slightly scale up on hover
+                        boxShadow: 4, // Increase shadow on hover
+                      },
+                    }}
+                  >
+                    <UserMap locations={locations} />
+                  </Box>
                 </Box>
+              )}
+            </Box>
+
+            {/* Right container for distance info */}
+            <Box sx={{ mr: 1, mt: 2 }}>
+              <Box
+                sx={{
+                  backgroundColor: "#e3f2fd",
+                  borderRadius: 2,
+                  padding: 2,
+                  border: "1px solid #ccc", // Set boundary
+                  boxShadow: 2, // Add shadow
+                  transition: "transform 0.2s, box-shadow 0.2s", // Smooth transition for hover
+                  "&:hover": {
+                    transform: "scale(1.02)", // Slightly scale up on hover
+                    boxShadow: 4, // Increase shadow on hover
+                  },
+                  height: 240,
+                }}
+              >
+                <TodayDistanceInfo
+                  userId={userId}
+                  selectedDate={selectedDate}
+                />
               </Box>
-            )}
-          </>
-        ) : (
-          <Typography variant="body1" textAlign="center">
-            Please log in to view your location and map.
-          </Typography>
-        )}
-      </Box>
+
+              <Box
+                sx={{
+                  backgroundColor: "#e3f2fd",
+                  borderRadius: 2,
+                  padding: 2,
+                  border: "1px solid #ccc", // Set boundary
+                  boxShadow: 2, // Add shadow
+                  transition: "transform 0.2s, box-shadow 0.2s", // Smooth transition for hover
+                  mt: 1, // Add margin top to separate the two boxes
+                  "&:hover": {
+                    transform: "scale(1.02)", // Slightly scale up on hover
+                    boxShadow: 4, // Increase shadow on hover
+                  },
+                  height: 240,
+                }}
+              >
+                <TotalDistanceInfo userId={userId} />
+              </Box>
+            </Box>
+          </Box>
+        </>
+      ) : (
+        <Typography variant="body1" textAlign="center">
+          Please log in to view your location and map.
+        </Typography>
+      )}
     </Box>
   );
 };

@@ -1,13 +1,13 @@
-// src/context/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { auth } from "../firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth"; // Import signOut from Firebase
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [userId, setUserId] = useState(null);
+  const [userId, setUserId] = useState(null); // State to store the currently authenticated user's ID
 
+  // useEffect hook to monitor authentication state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
       }
     });
 
+    // Cleanup function to unsubscribe from auth state changes
     return () => unsubscribe();
   }, []);
 

@@ -80,7 +80,7 @@ const Signup = () => {
         email,
         phone,
         isLoggedIn: false,
-        createdAt, // Save the timestamp in UTC+5:30
+        createdAt,
       });
 
       alert("User registered successfully!");

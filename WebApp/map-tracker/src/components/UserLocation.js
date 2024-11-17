@@ -24,15 +24,15 @@ const UserLocation = ({
           onAvailableDatesUpdate(availableDates);
 
           if (selectedDate && data[selectedDate]) {
-            const newLocations = [];
+            const newLocations = []; // Array to hold the location data for the selected date
 
-            // Process location data for the selected date
+            // Retrieve time entries for the selected date
             const timeEntries = data[selectedDate];
 
-            // Check if timeEntries is a valid object
+            // Checked if timeEntries is a valid object
             if (timeEntries && typeof timeEntries === "object") {
               Object.keys(timeEntries).forEach((timeKey) => {
-                const point = timeEntries[timeKey];
+                const point = timeEntries[timeKey]; // Get the location data at this time entry
                 if (point && point.latitude && point.longitude) {
                   newLocations.push({
                     latitude: point.latitude,

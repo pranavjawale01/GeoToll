@@ -12,7 +12,7 @@ import {
   Alert,
   Avatar,
 } from "@mui/material"; // Import Material UI components
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined"; // Import Lock Icon
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 
 const Login = () => {
   const [email, setEmail] = useState("");
