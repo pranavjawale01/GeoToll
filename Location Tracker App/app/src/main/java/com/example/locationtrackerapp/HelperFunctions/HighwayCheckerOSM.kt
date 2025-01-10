@@ -159,6 +159,6 @@ fun main() {
         }
 
         // Sleep for 3 seconds between each request
-        Thread.sleep(10000)
+        Thread.sleep(3000)
     }
 }

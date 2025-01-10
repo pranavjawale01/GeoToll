@@ -90,7 +90,7 @@ object HighwayCheckerOverpass {
 
     // Function to check if the highway type is considered a highway or expressway
     private fun checkHighwayType(highwayType: String): Boolean {
-        val highwayTypes = listOf("motorway", "trunk", "primary", "secondary", "tertiary")
+        val highwayTypes = listOf("motorway", "trunk", "primary")
         return highwayTypes.contains(highwayType)
     }
 
