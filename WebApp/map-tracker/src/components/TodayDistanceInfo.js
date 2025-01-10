@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { ref, onValue } from "firebase/database";
 import { database } from "../firebase"; // Firebase config
 
-const TodayDistanceInfo = ({ userId, selectedDate }) => {
+const TodayDistanceInfo = ({ userId, selectedDate, onTollUpdate }) => {
   const [todayTotalDistance, setTodayTotalDistance] = useState(0);
   const [todayTotalHighwayDistance, setTodayTotalHighwayDistance] = useState(0);
+  const [todayTotalCost, setTodayTotalCost] = useState(0);
+
 
   useEffect(() => {
     if (userId && selectedDate) {
@@ -28,26 +30,47 @@ const TodayDistanceInfo = ({ userId, selectedDate }) => {
 
             setTodayTotalDistance(totalDistance);
             setTodayTotalHighwayDistance(totalHighwayDistance);
+          
+            // Calculate today's toll cost
+            const costPerMeter = 5; // Cost per unit distance
+            const freeDistance = 20; // Free distance in meters
+            const todayTotalCost =
+            totalHighwayDistance > freeDistance
+                ? costPerMeter * (totalHighwayDistance - freeDistance)
+                : 0;
+
+            setTodayTotalCost(todayTotalCost);
+
+            // Pass the toll cost to the parent via callback
+            if (onTollUpdate) {
+              onTollUpdate(todayTotalCost);
+            }
           }
         } else {
           console.log("No data for the selected date."); // Log when no data exists
           setTodayTotalDistance(0);
           setTodayTotalHighwayDistance(0);
+          setTodayTotalCost(0);
+          if (onTollUpdate) {
+            onTollUpdate(0);
+          }
         }
       });
     }
-  }, [userId, selectedDate]);
+  }, [userId, selectedDate, onTollUpdate]);
 
   return (
     <div>
-      <h3>Today's Distance Traveled</h3>
-      <p>Total Distance (Today): {todayTotalDistance.toFixed(2)} meters</p>
-      <p>
-        Total Highway Distance (Today): {todayTotalHighwayDistance.toFixed(2)}{" "}
-        meters
+      <h4 style={{ marginBottom: "5px" }}>Today's Distance Traveled</h4>
+      <p style={{ margin: "2px 0" }}>
+        Total Distance (Today): {todayTotalDistance.toFixed(2)} meters
+      </p>
+      <p style={{ margin: "2px 0" }}>
+        Total Highway Distance (Today): {todayTotalHighwayDistance.toFixed(2)} meters
       </p>
     </div>
   );
+  
 };
 
 export default TodayDistanceInfo;

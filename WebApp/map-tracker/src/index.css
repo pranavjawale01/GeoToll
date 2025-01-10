@@ -11,3 +11,44 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.blinking {
+  animation: blink 1s step-start 0s infinite;
+}
+
+@keyframes blink {
+  0% {
+    color: #ff0000; /* Neon Pink */
+  }
+  50% {
+    color: #a11c39; /* Neon Blue */
+  }
+  100% {
+    color: #e40e0e; /* Neon Pink */
+  }
+}
+
+.button-impressive {
+  padding: 10px 20px;
+  background-color: #063fb8; /* Red background for visibility */
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px; /* Slightly rounded corners */
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  
+}
+
+.button-impressive:hover {
+  background-color: #113071; /* Lighter red on hover */
+  transform: scale(1.01); /* Slight zoom-in effect */
+}
+
+.button-impressive:active {
+  background-color: #0822d0; /* Darker red when pressed */
+  transform: scale(0.98); /* Slight zoom-out effect */
+}

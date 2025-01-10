@@ -37,9 +37,9 @@ const TotalDistanceInfo = ({ userId }) => {
 
   return (
     <div>
-      <h3>Total Distance Information</h3>
-      <p>Total Distance: {totalDistance.toFixed(2)} meters</p>
-      <p>Total Highway Distance: {totalHighwayDistance.toFixed(2)} meters</p>
+      <h4 style={{ marginBottom: "5px" }}>Total Distance Information</h4>
+      <p style={{ margin: "2px 0" }}>Total Distance: {totalDistance.toFixed(2)} meters</p>
+      <p style={{ margin: "2px 0" }}>Total Highway Distance: {totalHighwayDistance.toFixed(2)} meters</p>
     </div>
   );
 };
