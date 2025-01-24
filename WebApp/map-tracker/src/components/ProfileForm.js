@@ -28,14 +28,17 @@ const ProfileForm = () => {
     gender: "",
     permanentAddress: "",
     correspondenceAddress: "",
-    vehicles: "",
+    lightMotorVehicles: "", //new
+    lightCommercialVehicles: "",//new
+    heavyVehicles: "",//new
+    //vehicles: "",
     age: "",
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [sameAddress, setSameAddress] = useState(false);
-
+  const [vehicles, setVehicles] = useState([]); // new
   const auth = getAuth();
   const user = auth.currentUser;
   const navigate = useNavigate(); // Initialize useNavigate
@@ -62,6 +65,7 @@ const ProfileForm = () => {
               vehicles: userProfile.vehicles || "",
               age: calculateAge(userProfile.dob) || "",
             });
+            setVehicles(userProfile.vehicles || []);
           } else {
             setError("No user data found. Please complete your profile.");
           }
@@ -91,9 +95,31 @@ const ProfileForm = () => {
     return age;
   };
 
+  //Handle vehicles - new
+  const handleAddVehicle = () => {
+    setVehicles([...vehicles, { type: "", number: "" }]);
+  };
+
+  const handleVehicleChange = (index, field, value) => {
+    const updatedVehicles = vehicles.map((vehicle, i) =>
+      i === index ? { ...vehicle, [field]: value } : vehicle
+    );
+    setVehicles(updatedVehicles);
+  };
+
   // Handle input changes in the form fields
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    // Allow only zero or positive values for specific fields
+  const fieldsToValidate = ["lightMotorVehicles", "lightCommercialVehicles", "heavyVehicles"];
+  
+  if (fieldsToValidate.includes(name)) {
+    // Ensure the value is zero or positive
+    const validatedValue = Math.max(0, Number(value) || 0);
+    setUserData({ ...userData, [name]: validatedValue });
+    return; // Exit early since validation is complete
+  }
 
     // If the user selects a date of birth (dob), calculate the age
     if (name === "dob") {
@@ -137,6 +163,7 @@ const ProfileForm = () => {
       const updatedUser = {
         ...userData,
         age: calculateAge(userData.dob), // Recalculate age
+        vehicles
       };
 
       const userRef = ref(database, `users/${user.uid}`);
@@ -251,7 +278,7 @@ const ProfileForm = () => {
             margin="normal"
             required
             InputLabelProps={{
-              shrink: true,
+            shrink: true,
             }}
           />
           <TextField
@@ -260,7 +287,7 @@ const ProfileForm = () => {
             name="age"
             value={userData.age}
             InputProps={{
-              readOnly: true,
+            readOnly: true,
             }}
             margin="normal"
             disabled
@@ -312,7 +339,7 @@ const ProfileForm = () => {
             rows={3}
             disabled={sameAddress}
           />
-          <TextField
+          {/* <TextField
             fullWidth
             label="Total Vehicles"
             name="vehicles"
@@ -321,7 +348,44 @@ const ProfileForm = () => {
             onChange={handleChange}
             margin="normal"
             required
-          />
+          /> */}
+          <Typography variant="h6" sx={{ marginTop: 3 }}>
+          Vehicle Details
+        </Typography>
+        {vehicles.map((vehicle, index) => (
+          <Box key={index} sx={{ display: "flex", gap: 2, marginBottom: 2 }}>
+            <FormControl fullWidth required>
+              <InputLabel>Vehicle Type</InputLabel>
+              <Select
+                value={vehicle.type}
+                onChange={(e) =>
+                  handleVehicleChange(index, "type", e.target.value)
+                }
+              >
+                <MenuItem value="LMV">LMV</MenuItem>
+                <MenuItem value="LMV-TR">LMV-TR</MenuItem>
+                <MenuItem value="TRANS">TRANS</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              label="Vehicle Number"
+              value={vehicle.number}
+              onChange={(e) =>
+                handleVehicleChange(index, "number", e.target.value)
+              }
+              required
+            />
+          </Box>
+        ))}
+        <Button
+          type="button"
+          variant="outlined"
+          onClick={handleAddVehicle}
+          sx={{ marginBottom: 2 }}
+        >
+          Add Vehicle
+        </Button>
           <Button
             type="submit"
             variant="contained"
@@ -348,6 +412,46 @@ const ProfileForm = () => {
 
 export default ProfileForm;
 
+/* Three Fields withpout the add functionality.
+<Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 2, // Add spacing between the fields
+            }}
+          >
+            <TextField
+              fullWidth
+              label="LMV"
+              name="lightMotorVehicles"
+              type="number"
+              value={userData.lightMotorVehicles}
+              onChange={handleChange}
+              margin="normal"
+              required
+            />
+            <TextField
+              fullWidth
+              label="LMV-TR"
+              name="lightCommercialVehicles"
+              type="number"
+              value={userData.lightCommercialVehicles}
+              onChange={handleChange}
+              margin="normal"
+              required
+            />
+            <TextField
+              fullWidth
+              label="TRANS"
+              name="heavyVehicles"
+              type="number"
+              value={userData.heavyVehicles}
+              onChange={handleChange}
+              margin="normal"
+              required
+            />
+          </Box>
+*/
 //######## BEFORE STYLING ##########
 
 // // src/components/ProfileForm.js

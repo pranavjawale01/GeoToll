@@ -38,8 +38,8 @@ const TotalDistanceInfo = ({ userId }) => {
   return (
     <div>
       <h4 style={{ marginBottom: "5px" }}>Total Distance Information</h4>
-      <p style={{ margin: "2px 0" }}>Total Distance: {totalDistance.toFixed(2)} meters</p>
-      <p style={{ margin: "2px 0" }}>Total Highway Distance: {totalHighwayDistance.toFixed(2)} meters</p>
+      <p style={{ margin: "2px 0" }}>Total Distance: {totalDistance/(1000).toFixed(2)} Km</p>
+      <p style={{ margin: "2px 0" }}>Total Highway Distance: {totalHighwayDistance/(1000).toFixed(2)} Km</p>
     </div>
   );
 };
