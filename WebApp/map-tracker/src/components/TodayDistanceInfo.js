@@ -22,8 +22,8 @@ const TodayDistanceInfo = ({ userId, selectedDate, onTollUpdate }) => {
 
           if (data) {
             // Directly access todayTotalDistance and todayTotalHighwayDistance
-            const totalDistance = data.todayTotalDistance || 0;
-            const totalHighwayDistance = data.todayTotalHighwayDistance || 0;
+            const totalDistance = data.todayTotalDistance/(1000) || 0;
+            const totalHighwayDistance = data.todayTotalHighwayDistance/(1000) || 0;
 
             // console.log("Total Distance:", totalDistance); // Log total distance
             // console.log("Total Highway Distance:", totalHighwayDistance); // Log total highway distance

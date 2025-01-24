@@ -43,7 +43,6 @@ const ProfileForm = () => {
   const user = auth.currentUser;
   const navigate = useNavigate(); // Initialize useNavigate
 
-  // Fetch existing user data from Firebase Realtime Database
   useEffect(() => {
     const fetchData = async () => {
       if (user) {
@@ -62,22 +61,23 @@ const ProfileForm = () => {
               gender: userProfile.gender || "",
               permanentAddress: userProfile.permanentAddress || "",
               correspondenceAddress: userProfile.correspondenceAddress || "",
-              vehicles: userProfile.vehicles || "",
               age: calculateAge(userProfile.dob) || "",
             });
-            setVehicles(userProfile.vehicles || []);
+            setVehicles(Array.isArray(userProfile.vehicles) ? userProfile.vehicles : []);
           } else {
             setError("No user data found. Please complete your profile.");
           }
         } catch (error) {
+          console.error("Error fetching data:", error);
           setError("Error fetching data from Firebase.");
         }
       }
       setLoading(false);
     };
-
+  
     fetchData();
   }, [user]);
+  
 
   // Calculate age based on the date of birth (DOB)
   const calculateAge = (dob) => {
