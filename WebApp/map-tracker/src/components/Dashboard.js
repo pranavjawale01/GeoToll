@@ -94,8 +94,23 @@ const Dashboard = () => {
                 userId={userId}
                 selectedDate={selectedDate}
                 onLocationsUpdate={setLocations}
-                onAvailableDatesUpdate={setAvailableDates}
+                onAvailableDatesUpdate={(dates) => {
+                  const sortedDates = dates
+                    .map((date) => {
+                      // Split the dd/mm/yyyy format
+                      const [day, month, year] = date.split("-").map(Number);
+                      
+                      return {
+                        original: date,
+                        sortable: new Date(year, month - 1, day), // Convert to Date object
+                      };
+                    })
+                    .sort((a, b) => a.sortable - b.sortable) // Sort by Date object
+                    .map((item) => item.original); // Extract the original dd/mm/yyyy format
+                  setAvailableDates(sortedDates); // Update state with sorted dates
+                }}
               />
+
               {locations.length > 0 && (
                 <Box sx={{ mt: 2 }}>
                   <Box
