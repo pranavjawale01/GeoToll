@@ -63,10 +63,10 @@ const TodayDistanceInfo = ({ userId, selectedDate, onTollUpdate }) => {
     <div>
       <h4 style={{ marginBottom: "5px" }}>Today's Distance Traveled</h4>
       <p style={{ margin: "2px 0" }}>
-        Total Distance (Today): {todayTotalDistance/(1000).toFixed(2)} Km
+        Total Distance (Today): {todayTotalDistance.toFixed(2)} Km
       </p>
       <p style={{ margin: "2px 0" }}>
-        Total Highway Distance (Today): {todayTotalHighwayDistance/(1000).toFixed(2)} Km
+        Total Highway Distance (Today): {todayTotalHighwayDistance.toFixed(2)} Km
       </p>
     </div>
   );

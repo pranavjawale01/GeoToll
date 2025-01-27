@@ -29,8 +29,8 @@ const ProfileForm = () => {
     permanentAddress: "",
     correspondenceAddress: "",
     lightMotorVehicles: "", //new
-    lightCommercialVehicles: "",//new
-    heavyVehicles: "",//new
+    lightCommercialVehicles: "", //new
+    heavyVehicles: "", //new
     //vehicles: "",
     age: "",
   });
@@ -63,7 +63,9 @@ const ProfileForm = () => {
               correspondenceAddress: userProfile.correspondenceAddress || "",
               age: calculateAge(userProfile.dob) || "",
             });
-            setVehicles(Array.isArray(userProfile.vehicles) ? userProfile.vehicles : []);
+            setVehicles(
+              Array.isArray(userProfile.vehicles) ? userProfile.vehicles : []
+            );
           } else {
             setError("No user data found. Please complete your profile.");
           }
@@ -74,10 +76,9 @@ const ProfileForm = () => {
       }
       setLoading(false);
     };
-  
+
     fetchData();
   }, [user]);
-  
 
   // Calculate age based on the date of birth (DOB)
   const calculateAge = (dob) => {
@@ -95,31 +96,23 @@ const ProfileForm = () => {
     return age;
   };
 
-  //Handle vehicles - new
-  const handleAddVehicle = () => {
-    setVehicles([...vehicles, { type: "", number: "" }]);
-  };
-
-  const handleVehicleChange = (index, field, value) => {
-    const updatedVehicles = vehicles.map((vehicle, i) =>
-      i === index ? { ...vehicle, [field]: value } : vehicle
-    );
-    setVehicles(updatedVehicles);
-  };
-
   // Handle input changes in the form fields
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     // Allow only zero or positive values for specific fields
-  const fieldsToValidate = ["lightMotorVehicles", "lightCommercialVehicles", "heavyVehicles"];
-  
-  if (fieldsToValidate.includes(name)) {
-    // Ensure the value is zero or positive
-    const validatedValue = Math.max(0, Number(value) || 0);
-    setUserData({ ...userData, [name]: validatedValue });
-    return; // Exit early since validation is complete
-  }
+    const fieldsToValidate = [
+      "lightMotorVehicles",
+      "lightCommercialVehicles",
+      "heavyVehicles",
+    ];
+
+    if (fieldsToValidate.includes(name)) {
+      // Ensure the value is zero or positive
+      const validatedValue = Math.max(0, Number(value) || 0);
+      setUserData({ ...userData, [name]: validatedValue });
+      return; // Exit early since validation is complete
+    }
 
     // If the user selects a date of birth (dob), calculate the age
     if (name === "dob") {
@@ -150,6 +143,18 @@ const ProfileForm = () => {
     }
   };
 
+  //Handle vehicles - new
+  const handleAddVehicle = () => {
+    setVehicles([...vehicles, { type: "", number: "" }]);
+  };
+
+  const handleVehicleChange = (index, field, value) => {
+    const updatedVehicles = vehicles.map((vehicle, i) =>
+      i === index ? { ...vehicle, [field]: value } : vehicle
+    );
+    setVehicles(updatedVehicles);
+  };
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -163,7 +168,7 @@ const ProfileForm = () => {
       const updatedUser = {
         ...userData,
         age: calculateAge(userData.dob), // Recalculate age
-        vehicles
+        vehicles,
       };
 
       const userRef = ref(database, `users/${user.uid}`);
@@ -278,7 +283,7 @@ const ProfileForm = () => {
             margin="normal"
             required
             InputLabelProps={{
-            shrink: true,
+              shrink: true,
             }}
           />
           <TextField
@@ -287,7 +292,7 @@ const ProfileForm = () => {
             name="age"
             value={userData.age}
             InputProps={{
-            readOnly: true,
+              readOnly: true,
             }}
             margin="normal"
             disabled
@@ -349,43 +354,43 @@ const ProfileForm = () => {
             margin="normal"
             required
           /> */}
-          <Typography variant="h6" sx={{ marginTop: 3 }}>
-          Vehicle Details
-        </Typography>
-        {vehicles.map((vehicle, index) => (
-          <Box key={index} sx={{ display: "flex", gap: 2, marginBottom: 2 }}>
-            <FormControl fullWidth required>
-              <InputLabel>Vehicle Type</InputLabel>
-              <Select
-                value={vehicle.type}
+          <Typography sx={{ marginTop: 1, marginBottom: 1 }}>
+            Vehicle Details
+          </Typography>
+          {vehicles.map((vehicle, index) => (
+            <Box key={index} sx={{ display: "flex", gap: 2, marginBottom: 2 }}>
+              <FormControl fullWidth required>
+                <InputLabel>Vehicle Type</InputLabel>
+                <Select
+                  value={vehicle.type}
+                  onChange={(e) =>
+                    handleVehicleChange(index, "type", e.target.value)
+                  }
+                >
+                  <MenuItem value="LMV">LMV</MenuItem>
+                  <MenuItem value="LMV-TR">LMV-TR</MenuItem>
+                  <MenuItem value="TRANS">TRANS</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField
+                fullWidth
+                label="Vehicle Number"
+                value={vehicle.number}
                 onChange={(e) =>
-                  handleVehicleChange(index, "type", e.target.value)
+                  handleVehicleChange(index, "number", e.target.value)
                 }
-              >
-                <MenuItem value="LMV">LMV</MenuItem>
-                <MenuItem value="LMV-TR">LMV-TR</MenuItem>
-                <MenuItem value="TRANS">TRANS</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              fullWidth
-              label="Vehicle Number"
-              value={vehicle.number}
-              onChange={(e) =>
-                handleVehicleChange(index, "number", e.target.value)
-              }
-              required
-            />
-          </Box>
-        ))}
-        <Button
-          type="button"
-          variant="outlined"
-          onClick={handleAddVehicle}
-          sx={{ marginBottom: 2 }}
-        >
-          Add Vehicle
-        </Button>
+                required
+              />
+            </Box>
+          ))}
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={handleAddVehicle}
+            sx={{ marginBottom: 2 }}
+          >
+            Add Vehicle
+          </Button>
           <Button
             type="submit"
             variant="contained"
