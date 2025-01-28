@@ -172,6 +172,12 @@ const Login = () => {
                 Sign up here
               </Link>
             </Typography>
+            <Typography variant="body2" align="center" sx={{ marginTop: 2 }}>
+              Forgot your password?{" "}
+              <Link href="/forgot-password" underline="hover">
+                Reset it here
+              </Link>
+            </Typography>
           </Box>
         </Grid>
       </Grid>

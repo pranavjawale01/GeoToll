@@ -9,6 +9,7 @@ import Login from "./components/Login";
 import Signup from "./components/Signup";
 import Dashboard from "./components/Dashboard";
 import ProfileForm from "./components/ProfileForm";
+import ForgotPassword from "./components/ForgotPassword"; // Import the ForgotPassword component
 import { AuthProvider } from "./context/AuthContext"; // Import AuthProvider
 import Navbar from "./components/Navbar";
 
@@ -35,6 +36,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<ProfileForm />} />
           </Routes>
