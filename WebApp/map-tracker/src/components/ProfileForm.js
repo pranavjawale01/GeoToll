@@ -155,6 +155,14 @@ const ProfileForm = () => {
     setVehicles(updatedVehicles);
   };
 
+  // Handle delete last vehicle
+  const handleDeleteVehicle = () => {
+    if (vehicles.length > 0) {
+      const updatedVehicles = vehicles.slice(0, -1); // Remove the last vehicle
+      setVehicles(updatedVehicles);
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -344,16 +352,6 @@ const ProfileForm = () => {
             rows={3}
             disabled={sameAddress}
           />
-          {/* <TextField
-            fullWidth
-            label="Total Vehicles"
-            name="vehicles"
-            type="number"
-            value={userData.vehicles}
-            onChange={handleChange}
-            margin="normal"
-            required
-          /> */}
           <Typography sx={{ marginTop: 1, marginBottom: 1 }}>
             Vehicle Details
           </Typography>
@@ -391,6 +389,17 @@ const ProfileForm = () => {
           >
             Add Vehicle
           </Button>
+
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={handleDeleteVehicle}
+            sx={{ marginBottom: 2, marginLeft: 20}}
+            disabled={vehicles.length === 0} // Disable if no vehicles
+          >
+            Delete Last Vehicle
+          </Button>
+
           <Button
             type="submit"
             variant="contained"
