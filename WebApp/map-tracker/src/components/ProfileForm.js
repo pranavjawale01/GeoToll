@@ -16,7 +16,7 @@ import {
   FormControlLabel,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
-
+import Map from "./AddressMap" // Added for address-map
 const ProfileForm = () => {
   const [userData, setUserData] = useState({
     name: "",
@@ -28,17 +28,20 @@ const ProfileForm = () => {
     gender: "",
     permanentAddress: "",
     correspondenceAddress: "",
-    lightMotorVehicles: "", //new
-    lightCommercialVehicles: "", //new
-    heavyVehicles: "", //new
+    lightMotorVehicles: "",
+    lightCommercialVehicles: "", 
+    heavyVehicles: "", 
     //vehicles: "",
     age: "",
+    latitude: "", // Latitude for location-new
+    longitude: "", // Longitude for location-new
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [sameAddress, setSameAddress] = useState(false);
-  const [vehicles, setVehicles] = useState([]); // new
+  const [vehicles, setVehicles] = useState([]); 
+  const [isMapOpen, setIsMapOpen] = useState(false); // To control map modal visibility-new
   const auth = getAuth();
   const user = auth.currentUser;
   const navigate = useNavigate(); // Initialize useNavigate
@@ -62,6 +65,8 @@ const ProfileForm = () => {
               permanentAddress: userProfile.permanentAddress || "",
               correspondenceAddress: userProfile.correspondenceAddress || "",
               age: calculateAge(userProfile.dob) || "",
+              latitude: userProfile.latitude || "", // new
+              longitude: userProfile.longitude || "", //new
             });
             setVehicles(
               Array.isArray(userProfile.vehicles) ? userProfile.vehicles : []
@@ -79,6 +84,12 @@ const ProfileForm = () => {
 
     fetchData();
   }, [user]);
+
+  //NEW
+  const handleLocationSelect = (lat, lng) => {
+    setUserData({ ...userData, latitude: lat, longitude: lng });
+    setIsMapOpen(false); // Close map after selecting the location
+  };
 
   // Calculate age based on the date of birth (DOB)
   const calculateAge = (dob) => {
@@ -143,7 +154,7 @@ const ProfileForm = () => {
     }
   };
 
-  //Handle vehicles - new
+  //Handle vehicles 
   const handleAddVehicle = () => {
     setVehicles([...vehicles, { type: "", number: "" }]);
   };
@@ -400,7 +411,75 @@ const ProfileForm = () => {
             Delete Last Vehicle
           </Button>
 
+          {/* Latitude and Longitude fields */}
+          <TextField
+            fullWidth
+            label="Latitude"
+            name="latitude"
+            value={userData.latitude}
+            margin="normal"
+            required
+            disabled
+          />
+          <TextField
+            fullWidth
+            label="Longitude"
+            name="longitude"
+            value={userData.longitude}
+            margin="normal"
+            required
+            disabled
+          />
+
+          {/* Button to open map */}
           <Button
+            type="button"
+            variant="outlined"
+            onClick={() => setIsMapOpen(true)}
+            sx={{ marginBottom: 2 }}
+          >
+            Select Location on Map
+          </Button>
+
+          {/* Map Modal */}
+          {isMapOpen && (
+            <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}>
+              <Box
+                sx={{
+                  position: "absolute",
+                  marginTop: 10,
+                  marginLeft: 20,
+                  backgroundColor: "black",
+                  padding: 2,
+                  zIndex: 1000,
+                  borderRadius: 2,
+                  boxShadow: 3,
+                  width: "90vw",   // Adjust width as needed (use viewport width for responsiveness)
+                  height: "90vw",  // Make height the same as width for a square box
+                  maxWidth: "500px",  // Optional: Maximum width to avoid it becoming too large
+                  maxHeight: "500px", // Optional: Maximum height to avoid it becoming too large
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+              >
+                <Map onLocationSelect={handleLocationSelect} 
+                sx={{ width: "100%", height: "100%" }}  // Make map take full space of the box
+                />
+                <Button
+                  variant="outlined"
+                  onClick={() => setIsMapOpen(false)}
+                  sx={{marginTop: 2 }}
+                >
+                  Close Map
+                </Button>
+              </Box>
+            </Box>
+          )}
+
+
+         <Button
             type="submit"
             variant="contained"
             color="primary"
