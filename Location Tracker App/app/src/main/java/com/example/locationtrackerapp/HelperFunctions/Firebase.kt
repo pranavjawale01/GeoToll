@@ -1,6 +1,7 @@
 package com.example.locationtrackerapp.HelperFunctions
 
 import android.icu.text.SimpleDateFormat
+import android.location.Location
 import android.util.Log
 import com.google.firebase.database.*
 import com.google.firebase.database.ktx.database
@@ -176,4 +177,35 @@ object FirebaseHelper {
                 Log.e("FirebaseHelper", "Error saving location", error)
             }
     }
+
+    fun saveOverSpeedPenalty(userId: String, previousLocation: Location, currentLocation: Location, distance: Double, speed: Double) {
+        val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+        val currentDate = dateFormatter.format(Date())
+
+        val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+        val currentTime = timeFormatter.format(Date())
+        val timeInterval = (currentLocation.time - previousLocation.time) / 1000
+
+        val penaltyData = mapOf(
+            "timestamp" to currentTime,
+            "previousLatitude" to previousLocation.latitude,
+            "previousLongitude" to previousLocation.longitude,
+            "currentLatitude" to currentLocation.latitude,
+            "currentLongitude" to currentLocation.longitude,
+            "distance" to distance,
+            "speed" to speed,
+            "timeInterval" to timeInterval
+        )
+
+        database.child("overspeeding").child(userId).child(currentDate).child(currentTime)
+            .setValue(penaltyData)
+            .addOnSuccessListener {
+                Log.d("FirebaseHelper", "Overspeed penalty recorded successfully: $penaltyData")
+            }
+            .addOnFailureListener { error ->
+                Log.e("FirebaseHelper", "Error recording overspeed penalty", error)
+            }
+    }
+
+
 }

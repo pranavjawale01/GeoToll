@@ -173,6 +173,10 @@ class MainActivity : ComponentActivity() {
             val speed = SpeedCalculator.calculateSpeed(previous, location)
             speedTextView.text = String.format("Speed: %.2f km/h", speed)
 
+            if (speed > 80) {
+                FirebaseHelper.saveOverSpeedPenalty(user!!.uid, previous, location, distance.toDouble(), speed)
+            }
+
             val timeInterval = (location.time - previous.time) / 1000.0
             currentDistanceTimeTextView.text = String.format("Current Distance: %.2f m, Time Interval: %.2f s", distance, timeInterval)
 
