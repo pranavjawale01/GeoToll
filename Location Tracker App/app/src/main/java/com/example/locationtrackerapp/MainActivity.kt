@@ -1,5 +1,6 @@
 package com.example.locationtrackerapp
 
+import DailyResetWorker
 import android.Manifest
 import android.content.Intent
 import android.content.IntentSender
@@ -17,7 +18,6 @@ import androidx.core.content.ContextCompat
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import com.example.locationtrackerapp.HelperFunctions.DailyResetWorker
 import com.example.locationtrackerapp.HelperFunctions.DistanceCalculator
 import com.example.locationtrackerapp.HelperFunctions.FirebaseHelper
 import com.example.locationtrackerapp.HelperFunctions.SpeedCalculator
@@ -292,7 +292,7 @@ class MainActivity : ComponentActivity() {
             timeInMillis = System.currentTimeMillis()
             set(Calendar.HOUR_OF_DAY, 23)
             set(Calendar.MINUTE, 59)
-            set(Calendar.SECOND, 50)
+            set(Calendar.SECOND, 58)
         }
 
         val currentTime = System.currentTimeMillis()
