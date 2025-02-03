@@ -206,4 +206,6 @@ object FirebaseHelper {
                 Log.e("FirebaseHelper", "Error recording overspeed penalty", error)
             }
     }
+
+
 }
