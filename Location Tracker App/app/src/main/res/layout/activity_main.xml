@@ -9,6 +9,17 @@
     android:background="@android:color/white"
     tools:context=".MainActivity">
 
+    <Spinner
+        android:id="@+id/vehicle_spinner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/spinner_border"
+        android:padding="10dp"
+        android:textColor="@color/black"
+        android:popupBackground="#FFEB7B"
+        android:dropDownWidth="wrap_content"
+        android:layout_marginBottom="12dp"/>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
