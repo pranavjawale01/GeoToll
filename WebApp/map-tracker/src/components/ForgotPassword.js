@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import { getDatabase, ref, get, child } from "firebase/database";
 import { TextField, Button, Typography, Alert, Box } from "@mui/material";
@@ -7,6 +8,9 @@ const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [linkSent, setLinkSent] = useState(false); // State to manage button visibility
+  const navigate = useNavigate(); // Hook to navigate between pages
+
   const auth = getAuth();
   const database = getDatabase();
 
@@ -42,6 +46,7 @@ const ForgotPassword = () => {
       // If email is registered, send the password reset email
       await sendPasswordResetEmail(auth, email);
       setSuccess("Password reset email sent successfully!");
+      setLinkSent(true); // Hide send link button after success
     } catch (err) {
       setError(err.message);
     }
@@ -84,6 +89,7 @@ const ForgotPassword = () => {
               },
             },
           }}
+          disabled={linkSent} // Disable input after sending the link
         />
         {error && (
           <Alert severity="error" sx={{ marginY: 1 }}>
@@ -95,21 +101,40 @@ const ForgotPassword = () => {
             {success}
           </Alert>
         )}
-        <Button
-          type="submit"
-          variant="contained"
-          color="primary"
-          fullWidth
-          sx={{
-            marginTop: 2,
-            backgroundColor: "#3f51b5", // Primary button color
-            "&:hover": {
-              backgroundColor: "#303f9f", // Darker shade on hover
-            },
-          }}
-        >
-          Send Reset Link
-        </Button>
+
+        {!linkSent ? (
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            fullWidth
+            sx={{
+              marginTop: 2,
+              backgroundColor: "#3f51b5", // Primary button color
+              "&:hover": {
+                backgroundColor: "#303f9f", // Darker shade on hover
+              },
+            }}
+          >
+            Send Reset Link
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            color="secondary"
+            fullWidth
+            sx={{
+              marginTop: 2,
+              backgroundColor: "#f44336", // Red button color
+              "&:hover": {
+                backgroundColor: "#d32f2f", // Darker red on hover
+              },
+            }}
+            onClick={() => navigate("/")} // Redirect to login page
+          >
+            Back to Login
+          </Button>
+        )}
       </form>
     </Box>
   );

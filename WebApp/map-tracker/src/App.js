@@ -17,8 +17,10 @@ import Navbar from "./components/Navbar";
 const AppLayout = ({ children }) => {
   const location = useLocation();
 
-  // Navbar is not displayed on the login and signup pages.
-  const showNavbar = !["/", "/signup"].includes(location.pathname);
+  // Navbar is not displayed on the login, signup, and forgot-password pages.
+  const showNavbar = !["/", "/signup", "/forgot-password"].includes(
+    location.pathname
+  );
 
   return (
     <>
@@ -32,15 +34,25 @@ const App = () => {
   return (
     <AuthProvider>
       <Router>
-        <AppLayout>
-          <Routes>
-            <Route path="/" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/profile" element={<ProfileForm />} />
-          </Routes>
-        </AppLayout>
+        <Routes>
+          {/* Pages without Navbar */}
+          <Route path="/" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+
+          {/* Pages with Navbar */}
+          <Route
+            path="/*"
+            element={
+              <AppLayout>
+                <Routes>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/profile" element={<ProfileForm />} />
+                </Routes>
+              </AppLayout>
+            }
+          />
+        </Routes>
       </Router>
     </AuthProvider>
   );
