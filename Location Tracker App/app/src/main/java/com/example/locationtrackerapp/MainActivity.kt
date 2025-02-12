@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.locationtrackerapp.HelperFunctions.BoundingBoxChecker
 import com.example.locationtrackerapp.HelperFunctions.DistanceCalculator
 import com.example.locationtrackerapp.HelperFunctions.FirebaseHelper
 import com.example.locationtrackerapp.HelperFunctions.SpeedCalculator
@@ -99,6 +100,15 @@ class MainActivity : ComponentActivity() {
             navigateToLogin()
         } else {
             emailTextView.text = user!!.email
+
+            BoundingBoxChecker.fetchBoundingBoxes(user!!.uid) { permBox, resBox ->
+                if (permBox != null) {
+                    println("Permanent Address Bounding Box: $permBox")
+                }
+                if (resBox != null) {
+                    println("Residential Address Bounding Box: $resBox")
+                }
+            }
 
             FirebaseHelper.fetchVehiclesFromFirebase { vehicleList ->
                 if (vehicleList.isNotEmpty()) {
@@ -199,6 +209,11 @@ class MainActivity : ComponentActivity() {
                     FirebaseHelper.saveTotalHighwayDistance(it.uid, currentVehicleId!!, totalHighwayDistanceKm)
                     FirebaseHelper.saveTodayTotalDistance(it.uid, currentVehicleId!!, todayTotalDistance)
                     FirebaseHelper.saveTodayTotalHighwayDistance(it.uid, currentVehicleId!!, todayTotalHighwayDistance)
+                    
+                    FirebaseHelper.setVehicleInactive(user!!.uid, previousVehicleId!!)
+                    FirebaseHelper.setVehicleInactive(user!!.uid, currentVehicleId!!)
+                    currentVehicleId = null
+                    previousVehicleId = null
                 }
             }
         }
@@ -235,9 +250,17 @@ class MainActivity : ComponentActivity() {
             val speed = SpeedCalculator.calculateSpeed(previous, location)
             speedTextView.text = String.format("Speed: %.2f km/h", speed)
 
-            if (speed > 80) {
+            var speedLimit: Int = 80 // Initialize with a default value
+
+            HighwayCheckerOSM.speedProviderForRoads(HighwayCheckerOSM.Coordinates(location.latitude, location.longitude)) { speed_temp ->
+                speedLimit = speed_temp
+                println("Speed limit updated: $speedLimit km/h")
+            }
+
+
+            if (speed > speedLimit) {
                 if (currentVehicleId != null) {
-                    FirebaseHelper.saveOverSpeedPenalty(user!!.uid, location, speed, currentVehicleId!!)
+                    FirebaseHelper.saveOverSpeedPenalty(user!!.uid, location, speed, speedLimit, currentVehicleId!!)
                 } else {
                     Log.e("MainActivity", "Error: currentVehicleId is null, cannot save penalty!")
                 }
@@ -295,7 +318,11 @@ class MainActivity : ComponentActivity() {
 
                     // Save the location and highway status
                     user?.let {
-                        FirebaseHelper.saveLocation(it.uid, currentVehicleId!!, location.latitude, location.longitude, isOnHighway)
+
+                        val isInsideBoundingBox = BoundingBoxChecker.isLocationInsideBoundingBox(location.latitude, location.longitude)
+                        println("Is inside bounding box? $isInsideBoundingBox")
+
+                        FirebaseHelper.saveLocation(it.uid, currentVehicleId!!, location.latitude, location.longitude, isOnHighway, isInsideBoundingBox)
                     }
                 }
             }

@@ -270,7 +270,8 @@ object FirebaseHelper {
         currentVehicleId: String,
         latitude: Double,
         longitude: Double,
-        isOnHighway: Boolean
+        isOnHighway: Boolean,
+        isInsideBoundingBox: Boolean
     ) {
         val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
         val currentDate = dateFormatter.format(Date())
@@ -278,17 +279,26 @@ object FirebaseHelper {
         val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
         val currentTime = timeFormatter.format(Date())
 
+        var count = 0;
+        if (isOnHighway) {
+            count = 1
+            if (isInsideBoundingBox) {
+                count = 2
+            }
+        }
+
         val timeNode =
             database.child("location").child(userId).child("coordinates").child(currentVehicleId)
                 .child(currentDate).child(currentTime)
 
         timeNode.child("latitude").setValue(latitude)
         timeNode.child("longitude").setValue(longitude)
-        timeNode.child("isOnHighway").setValue(isOnHighway)
+        timeNode.child("isOnHighway").setValue(count)
+
             .addOnSuccessListener {
                 Log.d(
                     "FirebaseHelper",
-                    "Location saved successfully: Lat: $latitude, Long: $longitude, Highway: $isOnHighway"
+                    "Location saved successfully: Lat: $latitude, Long: $longitude, Highway: $isOnHighway, InsideBox: $isInsideBoundingBox"
                 )
             }
             .addOnFailureListener { error ->
@@ -300,6 +310,7 @@ object FirebaseHelper {
         userId: String,
         currentLocation: Location,
         speed: Double,
+        speedLimit: Int,
         vehicle_id: String?
     ) {
         val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
@@ -313,6 +324,7 @@ object FirebaseHelper {
             "lat" to currentLocation.latitude,
             "lon" to currentLocation.longitude,
             "speed" to speed,
+            "speed_limit" to speedLimit,
             "penalty_charge" to 100,
             "penalty_paid" to false,
             "penalty_type" to "overspeed",
