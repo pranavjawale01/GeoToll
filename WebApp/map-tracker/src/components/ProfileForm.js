@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { getAuth } from "firebase/auth";
 import { ref, get, update } from "firebase/database";
 import { database } from "../firebase"; // Ensure correct import
+
+
 import {
   Box,
   Button,
@@ -27,24 +29,27 @@ const ProfileForm = () => {
     dob: "",
     gender: "",
     permanentAddress: "",
+    permanentLatitude: 0,
+    permanentLongitude: 0,
     correspondenceAddress: "",
+    correspondenceLatitude: 0,
+    correspondenceLongitude: 0,
     lightMotorVehicles: "",
     lightCommercialVehicles: "", 
     heavyVehicles: "", 
-    //vehicles: "",
     age: "",
-    latitude: "", // Latitude for location-new
-    longitude: "", // Longitude for location-new
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [sameAddress, setSameAddress] = useState(false);
   const [vehicles, setVehicles] = useState([]); 
-  const [isMapOpen, setIsMapOpen] = useState(false); // To control map modal visibility-new
+  //const [isMapOpen, setIsMapOpen] = useState(false); // To control map modal visibility-new
   const auth = getAuth();
   const user = auth.currentUser;
   const navigate = useNavigate(); // Initialize useNavigate
+  const [isPermanentMapOpen, setIsPermanentMapOpen] = useState(false);
+  const [isCorrespondenceMapOpen, setIsCorrespondenceMapOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -63,10 +68,12 @@ const ProfileForm = () => {
               dob: userProfile.dob || "",
               gender: userProfile.gender || "",
               permanentAddress: userProfile.permanentAddress || "",
+              permanentLatitude: userProfile.permanentLatitude || "",
+              permanentLongitude: userProfile.permanentLongitude || "",
               correspondenceAddress: userProfile.correspondenceAddress || "",
+              correspondenceLatitude: userProfile.correspondenceLatitude || "",
+              correspondenceLongitude: userProfile.correspondenceLongitude || "",
               age: calculateAge(userProfile.dob) || "",
-              latitude: userProfile.latitude || "", // new
-              longitude: userProfile.longitude || "", //new
             });
             setVehicles(
               Array.isArray(userProfile.vehicles) ? userProfile.vehicles : []
@@ -84,13 +91,8 @@ const ProfileForm = () => {
 
     fetchData();
   }, [user]);
-
-  //NEW
-  const handleLocationSelect = (lat, lng) => {
-    setUserData({ ...userData, latitude: lat, longitude: lng });
-    setIsMapOpen(false); // Close map after selecting the location
-  };
-
+  
+  
   // Calculate age based on the date of birth (DOB)
   const calculateAge = (dob) => {
     if (!dob) return "";
@@ -143,16 +145,85 @@ const ProfileForm = () => {
     }
   };
 
-  // Handle checkbox toggle for same address
-  const handleAddressCheckbox = () => {
-    setSameAddress(!sameAddress);
-    if (!sameAddress) {
-      setUserData({
-        ...userData,
-        correspondenceAddress: userData.permanentAddress,
-      });
+  
+  const handleAddressCheckbox = (event) => {
+    const checked = event.target.checked;
+    setSameAddress(checked);
+  
+    if (checked) {
+      setUserData(prev => ({
+        ...prev,
+        correspondenceAddress: prev.permanentAddress,
+        correspondenceLatitude: prev.permanentLatitude,
+        correspondenceLongitude: prev.permanentLongitude,
+      }));
+    } else {
+      setUserData(prev => ({
+        ...prev,
+        correspondenceAddress: "",
+        correspondenceLatitude: "",
+        correspondenceLongitude: "",
+      }));
     }
   };
+  
+  
+  const handlePermanentLocationSelect = async (lat, lng) => {
+    setUserData(prev => ({
+      ...prev,
+      permanentLatitude: lat,
+      permanentLongitude: lng,
+    }));
+  
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+      );
+      const data = await response.json();
+  
+      setUserData(prev => ({
+        ...prev,
+        permanentAddress: data?.display_name || "Address not found",
+      }));
+    } catch (error) {
+      console.error("Error fetching address:", error);
+      setUserData(prev => ({
+        ...prev,
+        permanentAddress: "Failed to fetch address",
+      }));
+    }
+  
+    setIsPermanentMapOpen(false);
+  };
+  
+  const handleCorrespondenceLocationSelect = async (lat, lng) => {
+    setUserData(prev => ({
+      ...prev,
+      correspondenceLatitude: lat,
+      correspondenceLongitude: lng,
+    }));
+  
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+      );
+      const data = await response.json();
+  
+      setUserData(prev => ({
+        ...prev,
+        correspondenceAddress: data?.display_name || "Address not found",
+      }));
+    } catch (error) {
+      console.error("Error fetching address:", error);
+      setUserData(prev => ({
+        ...prev,
+        correspondenceAddress: "Failed to fetch address",
+      }));
+    }
+  
+    setIsCorrespondenceMapOpen(false);
+  };
+  
 
   //Handle vehicles 
   const handleAddVehicle = () => {
@@ -207,6 +278,7 @@ const ProfileForm = () => {
   const handleClose = () => {
     navigate("/dashboard"); // Redirect to dashboard
   };
+
 
   if (loading) {
     return <p>Loading profile...</p>;
@@ -331,17 +403,88 @@ const ProfileForm = () => {
               <MenuItem value="other">Other</MenuItem>
             </Select>
           </FormControl>
-          <TextField
-            fullWidth
-            label="Permanent Address"
-            name="permanentAddress"
-            value={userData.permanentAddress}
-            onChange={handleChange}
-            margin="normal"
-            required
-            multiline
-            rows={3}
-          />
+
+          <Typography sx={{ marginTop: 1, marginBottom: 1 }}>
+            Permanent Address
+          </Typography>
+
+            <TextField
+              fullWidth
+              label="Permanent Address"
+              name="permanentAddress"
+              value={userData.permanentAddress}
+              onChange={handleChange}
+              margin="normal"
+              required
+              multiline
+              rows={3}
+            />
+
+            <TextField
+              fullWidth
+              label="Permanent Address Latitude"
+              name="permanentLatitude"
+              value={userData.permanentLatitude}
+              margin="normal"
+              required
+              disabled
+            />
+
+            <TextField
+              fullWidth
+              label="Permanent Address Longitude"
+              name="permanentLongitude"
+              value={userData.permanentLongitude}
+              margin="normal"
+              required
+              disabled
+            />
+
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={() => setIsPermanentMapOpen(true)}
+            >
+              Select Permanent Address on Map
+            </Button>
+
+          
+          {isPermanentMapOpen && (
+          <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}>
+            <Box
+              sx={{
+                position: "absolute",
+                marginTop: 10,
+                marginLeft: 20,
+                backgroundColor: "black",
+                padding: 2,
+                zIndex: 1000,
+                borderRadius: 2,
+                boxShadow: 3,
+                width: "90vw",
+                height: "90vw",
+                maxWidth: "500px",
+                maxHeight: "500px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center"
+              }}
+            >
+              <Map onLocationSelect={handlePermanentLocationSelect} 
+                sx={{ width: "100%", height: "100%" }} 
+              />
+              <Button
+                variant="outlined"
+                onClick={() => setIsPermanentMapOpen(false)}
+                sx={{ marginTop: 2 }}
+              >
+                Close Map
+              </Button>
+            </Box>
+          </Box>
+          )}
+
           <FormControlLabel
             control={
               <Checkbox
@@ -351,6 +494,7 @@ const ProfileForm = () => {
             }
             label="Same as Permanent Address"
           />
+
           <TextField
             fullWidth
             label="Correspondence Address"
@@ -363,6 +507,72 @@ const ProfileForm = () => {
             rows={3}
             disabled={sameAddress}
           />
+
+          <TextField
+            fullWidth
+            label="Correspondence Address Latitude"
+            name="correspondenceLatitude"
+            value={userData.correspondenceLatitude}
+            margin="normal"
+            required
+            disabled
+          />
+
+          <TextField
+            fullWidth
+            label="Correspondence Address Longitude"
+            name="correspondenceLongitude"
+            value={userData.correspondenceLongitude}
+            margin="normal"
+            required
+            disabled
+          />
+
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={() => setIsCorrespondenceMapOpen(true)}
+            disabled={sameAddress} // Disable when copying permanent address
+          >
+            Select Correspondence Address on Map
+          </Button>
+          
+          {isCorrespondenceMapOpen && (
+            <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}>
+              <Box
+                sx={{
+                  position: "absolute",
+                  marginTop: 10,
+                  marginLeft: 20,
+                  backgroundColor: "black",
+                  padding: 2,
+                  zIndex: 1000,
+                  borderRadius: 2,
+                  boxShadow: 3,
+                  width: "90vw",
+                  height: "90vw",
+                  maxWidth: "500px",
+                  maxHeight: "500px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+              >
+                <Map onLocationSelect={handleCorrespondenceLocationSelect} 
+                  sx={{ width: "100%", height: "100%" }} 
+                />
+                <Button
+                  variant="outlined"
+                  onClick={() => setIsCorrespondenceMapOpen(false)}
+                  sx={{ marginTop: 2 }}
+                >
+                  Close Map
+                </Button>
+              </Box>
+            </Box>
+          )}
+          
           <Typography sx={{ marginTop: 1, marginBottom: 1 }}>
             Vehicle Details
           </Typography>
@@ -410,74 +620,6 @@ const ProfileForm = () => {
           >
             Delete Last Vehicle
           </Button>
-
-          {/* Latitude and Longitude fields */}
-          <TextField
-            fullWidth
-            label="Latitude"
-            name="latitude"
-            value={userData.latitude}
-            margin="normal"
-            required
-            disabled
-          />
-          <TextField
-            fullWidth
-            label="Longitude"
-            name="longitude"
-            value={userData.longitude}
-            margin="normal"
-            required
-            disabled
-          />
-
-          {/* Button to open map */}
-          <Button
-            type="button"
-            variant="outlined"
-            onClick={() => setIsMapOpen(true)}
-            sx={{ marginBottom: 2 }}
-          >
-            Select Location on Map
-          </Button>
-
-          {/* Map Modal */}
-          {isMapOpen && (
-            <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}>
-              <Box
-                sx={{
-                  position: "absolute",
-                  marginTop: 10,
-                  marginLeft: 20,
-                  backgroundColor: "black",
-                  padding: 2,
-                  zIndex: 1000,
-                  borderRadius: 2,
-                  boxShadow: 3,
-                  width: "90vw",   // Adjust width as needed (use viewport width for responsiveness)
-                  height: "90vw",  // Make height the same as width for a square box
-                  maxWidth: "500px",  // Optional: Maximum width to avoid it becoming too large
-                  maxHeight: "500px", // Optional: Maximum height to avoid it becoming too large
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                <Map onLocationSelect={handleLocationSelect} 
-                sx={{ width: "100%", height: "100%" }}  // Make map take full space of the box
-                />
-                <Button
-                  variant="outlined"
-                  onClick={() => setIsMapOpen(false)}
-                  sx={{marginTop: 2 }}
-                >
-                  Close Map
-                </Button>
-              </Box>
-            </Box>
-          )}
-
 
          <Button
             type="submit"
