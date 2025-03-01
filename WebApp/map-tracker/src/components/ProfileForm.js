@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { getAuth } from "firebase/auth";
 import { ref, get, update } from "firebase/database";
 import { database } from "../firebase"; // Ensure correct import
+
+
 import {
   Box,
   Button,
@@ -16,7 +18,7 @@ import {
   FormControlLabel,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
-
+import Map from "./AddressMap" // Added for address-map
 const ProfileForm = () => {
   const [userData, setUserData] = useState({
     name: "",
@@ -27,20 +29,28 @@ const ProfileForm = () => {
     dob: "",
     gender: "",
     permanentAddress: "",
+    permanentLatitude: 0,
+    permanentLongitude: 0,
     correspondenceAddress: "",
-    vehicles: "",
+    correspondenceLatitude: 0,
+    correspondenceLongitude: 0,
+    lightMotorVehicles: "",
+    lightCommercialVehicles: "", 
+    heavyVehicles: "", 
     age: "",
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [sameAddress, setSameAddress] = useState(false);
-
+  const [vehicles, setVehicles] = useState([]); 
+  //const [isMapOpen, setIsMapOpen] = useState(false); // To control map modal visibility-new
   const auth = getAuth();
   const user = auth.currentUser;
   const navigate = useNavigate(); // Initialize useNavigate
+  const [isPermanentMapOpen, setIsPermanentMapOpen] = useState(false);
+  const [isCorrespondenceMapOpen, setIsCorrespondenceMapOpen] = useState(false);
 
-  // Fetch existing user data from Firebase Realtime Database
   useEffect(() => {
     const fetchData = async () => {
       if (user) {
@@ -58,14 +68,21 @@ const ProfileForm = () => {
               dob: userProfile.dob || "",
               gender: userProfile.gender || "",
               permanentAddress: userProfile.permanentAddress || "",
+              permanentLatitude: userProfile.permanentLatitude || "",
+              permanentLongitude: userProfile.permanentLongitude || "",
               correspondenceAddress: userProfile.correspondenceAddress || "",
-              vehicles: userProfile.vehicles || "",
+              correspondenceLatitude: userProfile.correspondenceLatitude || "",
+              correspondenceLongitude: userProfile.correspondenceLongitude || "",
               age: calculateAge(userProfile.dob) || "",
             });
+            setVehicles(
+              Array.isArray(userProfile.vehicles) ? userProfile.vehicles : []
+            );
           } else {
             setError("No user data found. Please complete your profile.");
           }
         } catch (error) {
+          console.error("Error fetching data:", error);
           setError("Error fetching data from Firebase.");
         }
       }
@@ -74,7 +91,8 @@ const ProfileForm = () => {
 
     fetchData();
   }, [user]);
-
+  
+  
   // Calculate age based on the date of birth (DOB)
   const calculateAge = (dob) => {
     if (!dob) return "";
@@ -95,6 +113,20 @@ const ProfileForm = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
+    // Allow only zero or positive values for specific fields
+    const fieldsToValidate = [
+      "lightMotorVehicles",
+      "lightCommercialVehicles",
+      "heavyVehicles",
+    ];
+
+    if (fieldsToValidate.includes(name)) {
+      // Ensure the value is zero or positive
+      const validatedValue = Math.max(0, Number(value) || 0);
+      setUserData({ ...userData, [name]: validatedValue });
+      return; // Exit early since validation is complete
+    }
+
     // If the user selects a date of birth (dob), calculate the age
     if (name === "dob") {
       const calculatedAge = calculateAge(value);
@@ -113,14 +145,103 @@ const ProfileForm = () => {
     }
   };
 
-  // Handle checkbox toggle for same address
-  const handleAddressCheckbox = () => {
-    setSameAddress(!sameAddress);
-    if (!sameAddress) {
-      setUserData({
-        ...userData,
-        correspondenceAddress: userData.permanentAddress,
-      });
+  
+  const handleAddressCheckbox = (event) => {
+    const checked = event.target.checked;
+    setSameAddress(checked);
+  
+    if (checked) {
+      setUserData(prev => ({
+        ...prev,
+        correspondenceAddress: prev.permanentAddress,
+        correspondenceLatitude: prev.permanentLatitude,
+        correspondenceLongitude: prev.permanentLongitude,
+      }));
+    } else {
+      setUserData(prev => ({
+        ...prev,
+        correspondenceAddress: "",
+        correspondenceLatitude: "",
+        correspondenceLongitude: "",
+      }));
+    }
+  };
+  
+  
+  const handlePermanentLocationSelect = async (lat, lng) => {
+    setUserData(prev => ({
+      ...prev,
+      permanentLatitude: lat,
+      permanentLongitude: lng,
+    }));
+  
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+      );
+      const data = await response.json();
+  
+      setUserData(prev => ({
+        ...prev,
+        permanentAddress: data?.display_name || "Address not found",
+      }));
+    } catch (error) {
+      console.error("Error fetching address:", error);
+      setUserData(prev => ({
+        ...prev,
+        permanentAddress: "Failed to fetch address",
+      }));
+    }
+  
+    setIsPermanentMapOpen(false);
+  };
+  
+  const handleCorrespondenceLocationSelect = async (lat, lng) => {
+    setUserData(prev => ({
+      ...prev,
+      correspondenceLatitude: lat,
+      correspondenceLongitude: lng,
+    }));
+  
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+      );
+      const data = await response.json();
+  
+      setUserData(prev => ({
+        ...prev,
+        correspondenceAddress: data?.display_name || "Address not found",
+      }));
+    } catch (error) {
+      console.error("Error fetching address:", error);
+      setUserData(prev => ({
+        ...prev,
+        correspondenceAddress: "Failed to fetch address",
+      }));
+    }
+  
+    setIsCorrespondenceMapOpen(false);
+  };
+  
+
+  //Handle vehicles 
+  const handleAddVehicle = () => {
+    setVehicles([...vehicles, { type: "", number: "" }]);
+  };
+
+  const handleVehicleChange = (index, field, value) => {
+    const updatedVehicles = vehicles.map((vehicle, i) =>
+      i === index ? { ...vehicle, [field]: value } : vehicle
+    );
+    setVehicles(updatedVehicles);
+  };
+
+  // Handle delete last vehicle
+  const handleDeleteVehicle = () => {
+    if (vehicles.length > 0) {
+      const updatedVehicles = vehicles.slice(0, -1); // Remove the last vehicle
+      setVehicles(updatedVehicles);
     }
   };
 
@@ -137,6 +258,7 @@ const ProfileForm = () => {
       const updatedUser = {
         ...userData,
         age: calculateAge(userData.dob), // Recalculate age
+        vehicles,
       };
 
       const userRef = ref(database, `users/${user.uid}`);
@@ -156,6 +278,7 @@ const ProfileForm = () => {
   const handleClose = () => {
     navigate("/dashboard"); // Redirect to dashboard
   };
+
 
   if (loading) {
     return <p>Loading profile...</p>;
@@ -280,17 +403,88 @@ const ProfileForm = () => {
               <MenuItem value="other">Other</MenuItem>
             </Select>
           </FormControl>
-          <TextField
-            fullWidth
-            label="Permanent Address"
-            name="permanentAddress"
-            value={userData.permanentAddress}
-            onChange={handleChange}
-            margin="normal"
-            required
-            multiline
-            rows={3}
-          />
+
+          <Typography sx={{ marginTop: 1, marginBottom: 1 }}>
+            Permanent Address
+          </Typography>
+
+            <TextField
+              fullWidth
+              label="Permanent Address"
+              name="permanentAddress"
+              value={userData.permanentAddress}
+              onChange={handleChange}
+              margin="normal"
+              required
+              multiline
+              rows={3}
+            />
+
+            <TextField
+              fullWidth
+              label="Permanent Address Latitude"
+              name="permanentLatitude"
+              value={userData.permanentLatitude}
+              margin="normal"
+              required
+              disabled
+            />
+
+            <TextField
+              fullWidth
+              label="Permanent Address Longitude"
+              name="permanentLongitude"
+              value={userData.permanentLongitude}
+              margin="normal"
+              required
+              disabled
+            />
+
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={() => setIsPermanentMapOpen(true)}
+            >
+              Select Permanent Address on Map
+            </Button>
+
+          
+          {isPermanentMapOpen && (
+          <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}>
+            <Box
+              sx={{
+                position: "absolute",
+                marginTop: 10,
+                marginLeft: 20,
+                backgroundColor: "black",
+                padding: 2,
+                zIndex: 1000,
+                borderRadius: 2,
+                boxShadow: 3,
+                width: "90vw",
+                height: "90vw",
+                maxWidth: "500px",
+                maxHeight: "500px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center"
+              }}
+            >
+              <Map onLocationSelect={handlePermanentLocationSelect} 
+                sx={{ width: "100%", height: "100%" }} 
+              />
+              <Button
+                variant="outlined"
+                onClick={() => setIsPermanentMapOpen(false)}
+                sx={{ marginTop: 2 }}
+              >
+                Close Map
+              </Button>
+            </Box>
+          </Box>
+          )}
+
           <FormControlLabel
             control={
               <Checkbox
@@ -300,6 +494,7 @@ const ProfileForm = () => {
             }
             label="Same as Permanent Address"
           />
+
           <TextField
             fullWidth
             label="Correspondence Address"
@@ -312,17 +507,121 @@ const ProfileForm = () => {
             rows={3}
             disabled={sameAddress}
           />
+
           <TextField
             fullWidth
-            label="Total Vehicles"
-            name="vehicles"
-            type="number"
-            value={userData.vehicles}
-            onChange={handleChange}
+            label="Correspondence Address Latitude"
+            name="correspondenceLatitude"
+            value={userData.correspondenceLatitude}
             margin="normal"
             required
+            disabled
           />
+
+          <TextField
+            fullWidth
+            label="Correspondence Address Longitude"
+            name="correspondenceLongitude"
+            value={userData.correspondenceLongitude}
+            margin="normal"
+            required
+            disabled
+          />
+
           <Button
+            type="button"
+            variant="outlined"
+            onClick={() => setIsCorrespondenceMapOpen(true)}
+            disabled={sameAddress} // Disable when copying permanent address
+          >
+            Select Correspondence Address on Map
+          </Button>
+          
+          {isCorrespondenceMapOpen && (
+            <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}>
+              <Box
+                sx={{
+                  position: "absolute",
+                  marginTop: 10,
+                  marginLeft: 20,
+                  backgroundColor: "black",
+                  padding: 2,
+                  zIndex: 1000,
+                  borderRadius: 2,
+                  boxShadow: 3,
+                  width: "90vw",
+                  height: "90vw",
+                  maxWidth: "500px",
+                  maxHeight: "500px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+              >
+                <Map onLocationSelect={handleCorrespondenceLocationSelect} 
+                  sx={{ width: "100%", height: "100%" }} 
+                />
+                <Button
+                  variant="outlined"
+                  onClick={() => setIsCorrespondenceMapOpen(false)}
+                  sx={{ marginTop: 2 }}
+                >
+                  Close Map
+                </Button>
+              </Box>
+            </Box>
+          )}
+          
+          <Typography sx={{ marginTop: 1, marginBottom: 1 }}>
+            Vehicle Details
+          </Typography>
+          {vehicles.map((vehicle, index) => (
+            <Box key={index} sx={{ display: "flex", gap: 2, marginBottom: 2 }}>
+              <FormControl fullWidth required>
+                <InputLabel>Vehicle Type</InputLabel>
+                <Select
+                  value={vehicle.type}
+                  onChange={(e) =>
+                    handleVehicleChange(index, "type", e.target.value)
+                  }
+                >
+                  <MenuItem value="LMV">LMV</MenuItem>
+                  <MenuItem value="LMV-TR">LMV-TR</MenuItem>
+                  <MenuItem value="TRANS">TRANS</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField
+                fullWidth
+                label="Vehicle Number"
+                value={vehicle.number}
+                onChange={(e) =>
+                  handleVehicleChange(index, "number", e.target.value)
+                }
+                required
+              />
+            </Box>
+          ))}
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={handleAddVehicle}
+            sx={{ marginBottom: 2 }}
+          >
+            Add Vehicle
+          </Button>
+
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={handleDeleteVehicle}
+            sx={{ marginBottom: 2, marginLeft: 20}}
+            disabled={vehicles.length === 0} // Disable if no vehicles
+          >
+            Delete Last Vehicle
+          </Button>
+
+         <Button
             type="submit"
             variant="contained"
             color="primary"
@@ -348,6 +647,46 @@ const ProfileForm = () => {
 
 export default ProfileForm;
 
+/* Three Fields withpout the add functionality.
+<Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 2, // Add spacing between the fields
+            }}
+          >
+            <TextField
+              fullWidth
+              label="LMV"
+              name="lightMotorVehicles"
+              type="number"
+              value={userData.lightMotorVehicles}
+              onChange={handleChange}
+              margin="normal"
+              required
+            />
+            <TextField
+              fullWidth
+              label="LMV-TR"
+              name="lightCommercialVehicles"
+              type="number"
+              value={userData.lightCommercialVehicles}
+              onChange={handleChange}
+              margin="normal"
+              required
+            />
+            <TextField
+              fullWidth
+              label="TRANS"
+              name="heavyVehicles"
+              type="number"
+              value={userData.heavyVehicles}
+              onChange={handleChange}
+              margin="normal"
+              required
+            />
+          </Box>
+*/
 //######## BEFORE STYLING ##########
 
 // // src/components/ProfileForm.js
