@@ -115,19 +115,11 @@ class MainActivity : ComponentActivity() {
                     val adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, vehicleList)
                     adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                     vehicleSpinner.adapter = adapter
-
-                    // Set the current vehicle if it's already selected
-                    currentVehicleId?.let {
-                        val position = vehicleList.indexOf(it)
-                        if (position >= 0) {
-                            vehicleSpinner.setSelection(position)
-                        }
-                    }
                 } else {
+                    // If no vehicles found, disable UI
                     disableUI()
                 }
             }
-
 
             // Handle vehicle selection
             vehicleSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -150,11 +142,10 @@ class MainActivity : ComponentActivity() {
 
                             // Enable UI when vehicle is selected
                             enableUI()
-
-                            vehicleSpinner.setSelection(position)
                         }
                     } else {
                         // If no vehicle is selected, disable UI
+                        stopLocationUpdates()
                         disableUI()
                     }
                 }
@@ -218,7 +209,7 @@ class MainActivity : ComponentActivity() {
                     FirebaseHelper.saveTotalHighwayDistance(it.uid, currentVehicleId!!, totalHighwayDistanceKm)
                     FirebaseHelper.saveTodayTotalDistance(it.uid, currentVehicleId!!, todayTotalDistance)
                     FirebaseHelper.saveTodayTotalHighwayDistance(it.uid, currentVehicleId!!, todayTotalHighwayDistance)
-
+                    
                     FirebaseHelper.setVehicleInactive(user!!.uid, previousVehicleId!!)
                     FirebaseHelper.setVehicleInactive(user!!.uid, currentVehicleId!!)
                     currentVehicleId = null
