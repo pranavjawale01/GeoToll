@@ -16,43 +16,63 @@ object FirebaseHelper {
 
     private val database: DatabaseReference = Firebase.database.reference
 
+
     /**
      * Fetches available vehicles (not in use) from Firebase and returns them via a callback.
      */
-    fun fetchVehiclesFromFirebase(callback: (List<String>) -> Unit) {
+    fun fetchVehiclesFromFirebase(
+        callback: (List<String>) -> Unit
+    ) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
         database.child("users").child(userId).child("vehicles")
             .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val vehicleList = mutableListOf<String>()
-                    vehicleList.add("Select Vehicle") // Default option
+                    vehicleList.add("Select Vehicle")
 
                     for (vehicleSnapshot in snapshot.children) {
-                        val vehicleId = vehicleSnapshot.key ?: continue
-                        val vehicleInUse =
-                            vehicleSnapshot.child("vehicle_in_used").getValue(Boolean::class.java)
-                                ?: false
+                        val vehicleId = vehicleSnapshot.key
 
+                        // Explicitly check if vehicleId is null
+                        if (vehicleId == null) {
+                            Log.w("VehicleFetch", "Skipping null vehicle ID")
+                            continue // Skip to the next iteration if it's null
+                        }
+
+                        // Also check if it's blank or empty
+                        if (vehicleId.isBlank()) {
+                            Log.w("VehicleFetch", "Skipping blank vehicle ID")
+                            continue
+                        }
+
+                        val vehicleInUse = vehicleSnapshot.child("vehicleInUsed").getValue(Boolean::class.java) ?: false
                         if (!vehicleInUse) {
                             vehicleList.add(vehicleId)
                         }
                     }
-                    callback(vehicleList) // Return the list to MainActivity
+
+                    Log.d("VehicleFetch", "Final Vehicle List: $vehicleList")
+                    callback(vehicleList)
                 }
 
                 override fun onCancelled(error: DatabaseError) {
                     Log.e("FirebaseHelper", "Error fetching vehicles", error.toException())
-                    callback(emptyList()) // Return empty list in case of error
+                    callback(emptyList())
                 }
             })
     }
 
-    fun setVehicleActive(userId: String, vehicleId: String, isActive: Boolean) {
+
+
+    fun setVehicleActive(
+        userId: String,
+        vehicleId: String,
+        isActive: Boolean
+    ) {
         val vehicleRef = database.child("users").child(userId).child("vehicles").child(vehicleId)
 
-        // Update the vehicle status
-        vehicleRef.child("vehicle_in_used").setValue(isActive)
+        vehicleRef.child("vehicleInUsed").setValue(isActive)
             .addOnSuccessListener {
                 Log.d("FirebaseHelper", "Vehicle $vehicleId set to active: $isActive")
             }
@@ -61,20 +81,20 @@ object FirebaseHelper {
             }
     }
 
-    fun setVehicleInactive(userId: String, vehicleId: String) {
-        val vehicleRef = database.child("users").child(userId).child("vehicles").child(vehicleId)
 
-        vehicleRef.child("vehicle_in_used").setValue(false)
-            .addOnSuccessListener {
-                Log.d("FirebaseHelper", "Vehicle $vehicleId set to inactive")
-            }
-            .addOnFailureListener { error ->
-                Log.e("FirebaseHelper", "Error setting vehicle inactive", error)
-            }
+    fun setVehicleInactive(
+        userId: String,
+        vehicleId: String
+    ) {
+        setVehicleActive(userId, vehicleId, false)
     }
 
+
     // Fetch the user's name from Firebase
-    fun fetchUserName(userId: String, callback: (String?) -> Unit) {
+    fun fetchUserName(
+        userId: String,
+        callback: (String?) -> Unit
+    ) {
         database.child("users").child(userId).child("name")
             .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
@@ -89,9 +109,14 @@ object FirebaseHelper {
             })
     }
 
+
     // Function to get total distance from Firebase
-    fun getTotalDistance(userId: String, currentVehicleId: String, callback: (Double?) -> Unit) {
-        database.child("location").child(userId).child("coordinates").child(currentVehicleId)
+    fun getTotalDistance(
+        userId: String,
+        vehicleId: String,
+        callback: (Double?) -> Unit
+    ) {
+        database.child("location").child(userId).child("coordinates").child(vehicleId)
             .child("totalDistance")
             .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
@@ -106,23 +131,24 @@ object FirebaseHelper {
             })
     }
 
+
     // Save total distance to Firebase
     fun saveTotalDistance(
         userId: String,
-        currentVehicleId: String,
+        vehicleId: String,
         totalDistance: Double,
         callback: ((Boolean) -> Unit)? = null
     ) {
-        database.child("location").child(userId).child("coordinates").child(currentVehicleId)
+        database.child("location").child(userId).child("coordinates").child(vehicleId)
             .child("totalDistance")
             .setValue(totalDistance)
             .addOnSuccessListener {
                 Log.d("FirebaseHelper", "Total distance updated successfully")
-                callback?.invoke(true)  // Invoke callback only if it's not null
+                callback?.invoke(true)
             }
             .addOnFailureListener { error ->
                 Log.e("FirebaseHelper", "Error updating total distance", error)
-                callback?.invoke(false) // Invoke callback only if it's not null
+                callback?.invoke(false)
             }
     }
 
@@ -152,6 +178,7 @@ object FirebaseHelper {
             })
     }
 
+
     // Save total highway distance to Firebase
     fun saveTotalHighwayDistance(
         userId: String,
@@ -169,44 +196,6 @@ object FirebaseHelper {
             }
     }
 
-    // Save today's total distance to Firebase
-    fun saveTodayTotalDistance(
-        userId: String,
-        currentVehicleId: String,
-        todayTotalDistance: Double
-    ) {
-        val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
-        val currentDate = dateFormatter.format(Date())
-
-        database.child("location").child(userId).child("coordinates").child(currentVehicleId)
-            .child(currentDate).child("todayTotalDistance").setValue(todayTotalDistance)
-            .addOnSuccessListener {
-                Log.d("FirebaseHelper", "Today's total distance updated successfully")
-            }
-            .addOnFailureListener { error ->
-                Log.e("FirebaseHelper", "Error updating today's total distance", error)
-            }
-    }
-
-    // Save today's total highway distance to Firebase
-    fun saveTodayTotalHighwayDistance(
-        userId: String,
-        currentVehicleId: String,
-        todayTotalHighwayDistance: Double
-    ) {
-        val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
-        val currentDate = dateFormatter.format(Date())
-
-        database.child("location").child(userId).child("coordinates").child(currentVehicleId)
-            .child(currentDate).child("todayTotalHighwayDistance")
-            .setValue(todayTotalHighwayDistance)
-            .addOnSuccessListener {
-                Log.d("FirebaseHelper", "Today's total highway distance updated successfully")
-            }
-            .addOnFailureListener { error ->
-                Log.e("FirebaseHelper", "Error updating today's total highway distance", error)
-            }
-    }
 
     // Get today's total distance from Firebase
     fun getTodayTotalDistance(
@@ -236,6 +225,27 @@ object FirebaseHelper {
             })
     }
 
+
+    // Save today's total distance to Firebase
+    fun saveTodayTotalDistance(
+        userId: String,
+        currentVehicleId: String,
+        todayTotalDistance: Double
+    ) {
+        val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+        val currentDate = dateFormatter.format(Date())
+
+        database.child("location").child(userId).child("coordinates").child(currentVehicleId)
+            .child(currentDate).child("todayTotalDistance").setValue(todayTotalDistance)
+            .addOnSuccessListener {
+                Log.d("FirebaseHelper", "Today's total distance updated successfully")
+            }
+            .addOnFailureListener { error ->
+                Log.e("FirebaseHelper", "Error updating today's total distance", error)
+            }
+    }
+
+
     // Get today's total highway distance from Firebase
     fun getTodayTotalHighwayDistance(
         userId: String,
@@ -264,37 +274,52 @@ object FirebaseHelper {
             })
     }
 
+
+    // Save today's total highway distance to Firebase
+    fun saveTodayTotalHighwayDistance(
+        userId: String,
+        currentVehicleId: String,
+        todayTotalHighwayDistance: Double
+    ) {
+        val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+        val currentDate = dateFormatter.format(Date())
+
+        database.child("location").child(userId).child("coordinates").child(currentVehicleId)
+            .child(currentDate).child("todayTotalHighwayDistance")
+            .setValue(todayTotalHighwayDistance)
+            .addOnSuccessListener {
+                Log.d("FirebaseHelper", "Today's total highway distance updated successfully")
+            }
+            .addOnFailureListener { error ->
+                Log.e("FirebaseHelper", "Error updating today's total highway distance", error)
+            }
+    }
+
+
     // Save latitude and longitude to Firebase
     fun saveLocation(
         userId: String,
-        currentVehicleId: String,
+        vehicleId: String,
         latitude: Double,
         longitude: Double,
         isOnHighway: Boolean,
         isInsideBoundingBox: Boolean
     ) {
-        val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
-        val currentDate = dateFormatter.format(Date())
+        val currentDate = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
+        val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 
-        val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-        val currentTime = timeFormatter.format(Date())
-
-        var count = 0;
-        if (isOnHighway) {
-            count = 1
-            if (isInsideBoundingBox) {
-                count = 2
-            }
+        val highwayStatus = when {
+            isOnHighway && isInsideBoundingBox -> 2
+            isOnHighway -> 1
+            else -> 0
         }
 
-        val timeNode =
-            database.child("location").child(userId).child("coordinates").child(currentVehicleId)
-                .child(currentDate).child(currentTime)
+        val timeNode = database.child("location").child(userId).child("coordinates").child(vehicleId)
+            .child(currentDate).child(currentTime)
 
         timeNode.child("latitude").setValue(latitude)
         timeNode.child("longitude").setValue(longitude)
-        timeNode.child("isOnHighway").setValue(count)
-
+        timeNode.child("isOnHighway").setValue(highwayStatus)
             .addOnSuccessListener {
                 Log.d(
                     "FirebaseHelper",
@@ -306,29 +331,28 @@ object FirebaseHelper {
             }
     }
 
+    // Save overspeed penalty to Firebase
     fun saveOverSpeedPenalty(
         userId: String,
-        currentLocation: Location,
+        location: Location,
         speed: Double,
         speedLimit: Int,
-        vehicleId: String?
+        vehicleId: String?,
     ) {
-        val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
-        val currentDate = dateFormatter.format(Date())
-
-        val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-        val currentTime = timeFormatter.format(Date())
+        val currentDate = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
+        val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 
         val penaltyData = mapOf(
             "timeStamp" to currentTime,
-            "latitude" to currentLocation.latitude,
-            "longitude" to currentLocation.longitude,
+            "latitude" to location.latitude,
+            "longitude" to location.longitude,
             "speed" to speed,
             "speedLimit" to speedLimit,
             "penaltyCharge" to 100,
             "penaltyPaid" to false,
             "penaltyType" to "overSpeed",
-            "vehicleId" to vehicleId
+            "vehicleId" to vehicleId,
+            "emailSent" to false,
         )
 
         database.child("penalties").child(userId).child(currentDate).child(currentTime)
