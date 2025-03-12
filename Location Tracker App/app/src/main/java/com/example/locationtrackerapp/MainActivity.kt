@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
         vehicleSpinner = findViewById(R.id.vehicle_spinner)
     }
 
-    // GPS IS ENABLED NOT WORKING
+    // GPS IS ENABLED BUT NOT WORKING
     fun isGpsWorking(): Boolean {
         val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
