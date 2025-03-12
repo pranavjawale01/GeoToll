@@ -1,10 +1,13 @@
 package com.example.locationtrackerapp
 
 import android.Manifest
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationManager
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
@@ -17,6 +20,7 @@ import android.widget.TextView
 import android.widget.ToggleButton
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.locationtrackerapp.HelperFunctions.BoundingBoxChecker
 import com.example.locationtrackerapp.HelperFunctions.DistanceCalculator
@@ -83,6 +87,29 @@ class MainActivity : ComponentActivity() {
         vehicleSpinner = findViewById(R.id.vehicle_spinner)
     }
 
+    // GPS IS ENABLED NOT WORKING
+    fun isGpsWorking(): Boolean {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+    }
+
+    fun isGpsAvailable(): Boolean {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.allProviders.contains(LocationManager.GPS_PROVIDER)
+    }
+
+    fun sendGpsNotWorkingNotification() {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notification = NotificationCompat.Builder(this, "GPS_STATUS_CHANNEL")
+            .setSmallIcon(R.drawable.ic_warning)
+            .setContentTitle("GPS Issue")
+            .setContentText("GPS is available but not working properly. Please check your GPS settings.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+
+        notificationManager.notify(1, notification)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -99,6 +126,15 @@ class MainActivity : ComponentActivity() {
         } else {
             emailTextView.text = user!!.email
 
+            // Fetch vehicles only if user ID is not null or blank
+            val userId = user?.uid
+
+            if (isGpsAvailable() && !isGpsWorking()) {
+                userId?.let { FirebaseHelper.sendGpsStatusToFirebase(userId, false) }
+                println("GPS is available but not working, reported to Firebase")
+                sendGpsNotWorkingNotification()
+            }
+
             BoundingBoxChecker.fetchBoundingBoxes(user!!.uid) { permBox, resBox ->
                 if (permBox != null) {
                     println("Permanent Address Bounding Box: $permBox")
@@ -107,9 +143,6 @@ class MainActivity : ComponentActivity() {
                     println("Residential Address Bounding Box: $resBox")
                 }
             }
-
-            // Fetch vehicles only if user ID is not null or blank
-            val userId = user?.uid
 
             if (!userId.isNullOrBlank()) {
                 fun fetchAndPopulateVehicles() {

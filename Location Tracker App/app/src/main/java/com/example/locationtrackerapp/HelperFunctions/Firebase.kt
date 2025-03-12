@@ -3,6 +3,7 @@ package com.example.locationtrackerapp.HelperFunctions
 import android.R
 import android.icu.text.SimpleDateFormat
 import android.location.Location
+import android.os.Build
 import android.util.Log
 import android.widget.ArrayAdapter
 import com.google.firebase.auth.FirebaseAuth
@@ -362,6 +363,28 @@ object FirebaseHelper {
             }
             .addOnFailureListener { error ->
                 Log.e("FirebaseHelper", "Error recording overspeed penalty", error)
+            }
+    }
+
+    fun sendGpsStatusToFirebase(userId: String, isGpsWorking: Boolean) {
+        val currentDate = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
+        val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+
+        val gpsStatusData = mapOf(
+            "isGpsWorking" to isGpsWorking,
+            "emailSent" to false,
+            "gpsStatusMessage" to if (isGpsWorking) "GPS is working fine" else "GPS Failed to Operate",
+            "deviceModel" to Build.MODEL,
+            "appVersion" to BuildConfig.VERSION_NAME
+        )
+
+        database.child("GPSFailed").child(userId).child(currentDate).child(currentTime)
+            .setValue(gpsStatusData)
+            .addOnSuccessListener {
+                Log.d("FirebaseHelper", "GPS status recorded successfully for user $userId at $currentTime on $currentDate")
+            }
+            .addOnFailureListener { error ->
+                Log.e("FirebaseHelper", "Error recording GPS status for user $userId", error)
             }
     }
 }
