@@ -112,17 +112,26 @@ class MainActivity : ComponentActivity() {
             val userId = user?.uid
 
             if (!userId.isNullOrBlank()) {
-                FirebaseHelper.fetchVehiclesFromFirebase { vehicleList ->
-                    val filteredVehicleList = vehicleList.filter { !it.isNullOrBlank() && it != "null" }
+                fun fetchAndPopulateVehicles() {
+                    FirebaseHelper.fetchVehiclesFromFirebase { vehicleList ->
+                        val filteredVehicleList = vehicleList.filter { !it.isNullOrBlank() && it != "null" }
 
-                    if (filteredVehicleList.isNotEmpty()) {
-                        val adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, filteredVehicleList)
-                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                        vehicleSpinner.adapter = adapter
-                    } else {
-                        println("Vehicle list is empty after filtering, disabling UI")
-                        disableUI()
+                        if (filteredVehicleList.isNotEmpty()) {
+                            val adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, filteredVehicleList)
+                            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                            vehicleSpinner.adapter = adapter
+                        } else {
+                            println("Vehicle list is empty after filtering, disabling UI")
+                            disableUI()
+                        }
                     }
+                }
+
+                fetchAndPopulateVehicles()
+
+                vehicleSpinner.setOnTouchListener { _, _ ->
+                    fetchAndPopulateVehicles()
+                    false // Allow the touch event to propagate
                 }
             } else {
                 println("User ID is null or blank, cannot fetch vehicles")
@@ -206,13 +215,18 @@ class MainActivity : ComponentActivity() {
                 }
                 /*
                 user?.let {
+                    currentVehicleId?.let { vehicleId -> FirebaseHelper.setVehicleInactive(user!!.uid, vehicleId) }
+                    currentVehicleId = null
+                }
+                */
+
+                user?.let {
                     previousVehicleId?.let { vehicleId -> FirebaseHelper.setVehicleInactive(user!!.uid, vehicleId) }
                     currentVehicleId?.let { vehicleId -> FirebaseHelper.setVehicleInactive(user!!.uid, vehicleId) }
 
                     currentVehicleId = null
                     previousVehicleId = null
                 }
-                */
             }
         }
 
@@ -428,6 +442,18 @@ class MainActivity : ComponentActivity() {
                     saveVehicleData(userId, vehicleId)
                     FirebaseHelper.setVehicleInactive(userId, vehicleId)
                 }
+                previousVehicleId?.let { vehicleId ->
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
+            }
+        } else {
+            user?.uid?.let { userId ->
+                currentVehicleId?.let { vehicleId ->
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
+                previousVehicleId?.let { vehicleId ->
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
             }
         }
     }
@@ -438,6 +464,18 @@ class MainActivity : ComponentActivity() {
             user?.uid?.let { userId ->
                 currentVehicleId?.let { vehicleId ->
                     saveVehicleData(userId, vehicleId)
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
+                previousVehicleId?.let { vehicleId ->
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
+            }
+        } else {
+            user?.uid?.let { userId ->
+                currentVehicleId?.let { vehicleId ->
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
+                previousVehicleId?.let { vehicleId ->
                     FirebaseHelper.setVehicleInactive(userId, vehicleId)
                 }
             }
@@ -492,7 +530,7 @@ class MainActivity : ComponentActivity() {
         todayTotalHighwayDistanceTextView.isEnabled = false
         totalDistanceKmTextView.isEnabled = false
         totalHighwayDistanceKmTextView.isEnabled = false
-        **/
+         **/
 
         // Set UI transparency to give a "frozen" effect
         toggleButton.alpha = 0.5f
