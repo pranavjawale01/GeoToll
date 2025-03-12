@@ -311,7 +311,7 @@ object FirebaseHelper {
         currentLocation: Location,
         speed: Double,
         speedLimit: Int,
-        vehicle_id: String?
+        vehicleId: String?
     ) {
         val dateFormatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
         val currentDate = dateFormatter.format(Date())
@@ -320,15 +320,15 @@ object FirebaseHelper {
         val currentTime = timeFormatter.format(Date())
 
         val penaltyData = mapOf(
-            "timestamp" to currentTime,
-            "lat" to currentLocation.latitude,
-            "lon" to currentLocation.longitude,
+            "timeStamp" to currentTime,
+            "latitude" to currentLocation.latitude,
+            "longitude" to currentLocation.longitude,
             "speed" to speed,
-            "speed_limit" to speedLimit,
-            "penalty_charge" to 100,
-            "penalty_paid" to false,
-            "penalty_type" to "overspeed",
-            "vehicle_id" to vehicle_id
+            "speedLimit" to speedLimit,
+            "penaltyCharge" to 100,
+            "penaltyPaid" to false,
+            "penaltyType" to "overSpeed",
+            "vehicleId" to vehicleId
         )
 
         database.child("penalties").child(userId).child(currentDate).child(currentTime)

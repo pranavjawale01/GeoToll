@@ -23,7 +23,7 @@ object BoundingBoxChecker {
     private var residentialBoundingBox: BoundingBox? = null
 
     // Fetch bounding box from Nominatim API
-    private fun fetchNominatimData(lat: Double, lon: Double): BoundingBox? {
+    fun fetchNominatimData(lat: Double, lon: Double): BoundingBox? {
         val client = OkHttpClient()
         val url = NOMINATIM_URL.format(lat, lon)
         val request = Request.Builder().url(url).header("User-Agent", "Mozilla/5.0").build()
@@ -109,5 +109,23 @@ object BoundingBoxChecker {
     fun isLocationInsideBoundingBox(lat: Double, lon: Double): Boolean {
         return (permanentBoundingBox?.contains(lat, lon) == true) ||
                 (residentialBoundingBox?.contains(lat, lon) == true)
+    }
+}
+
+fun main() {
+    val lat = 18.584676  // Example latitude
+    val lon = 73.736077 // Example longitude
+
+    // Fetch bounding box
+    val boundingBox = BoundingBoxChecker.fetchNominatimData(lat, lon)
+
+    if (boundingBox != null) {
+        println("Bounding Box for ($lat, $lon):")
+        println("Min Latitude: ${boundingBox.minLat}")
+        println("Max Latitude: ${boundingBox.maxLat}")
+        println("Min Longitude: ${boundingBox.minLon}")
+        println("Max Longitude: ${boundingBox.maxLon}")
+    } else {
+        println("Failed to fetch bounding box for ($lat, $lon)")
     }
 }
