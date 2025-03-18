@@ -22,7 +22,7 @@ const TodayDistanceInfo = ({
       onValue(todayDistanceRef, (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.val();
-          console.log("Fetched Data:", data); // Log fetched data
+          //console.log("Fetched Data:", data); // Log fetched data
 
           if (data) {
             // Directly access todayTotalDistance and todayTotalHighwayDistance

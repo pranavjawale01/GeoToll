@@ -73,8 +73,19 @@ const UserMap = ({ locations }) => {
 
     useEffect(() => {
       segments.forEach((segment) => {
+        // Determine color based on the isOnHighway value
+        let color;
+        if (segment.isOnHighway === 1) {
+          color = "blue"; // Highway
+        } else if (segment.isOnHighway === 0) {
+          color = "red"; // Service road or alternate route
+        } else if (segment.isOnHighway === 2) {
+          color = "yellow"; // New condition for isOnHighway === 2
+        }
+
+        // Create polyline with the selected color
         const polyline = L.polyline(segment.positions, {
-          color: segment.isOnHighway ? "blue" : "red", // Highway or service road
+          color: color,
         }).addTo(map);
 
         // Add arrowheads to the polyline
