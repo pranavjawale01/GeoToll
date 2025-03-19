@@ -3,7 +3,6 @@ import { getAuth } from "firebase/auth";
 import { ref, get, update } from "firebase/database";
 import { database } from "../firebase"; // Ensure correct import
 
-
 import {
   Box,
   Button,
@@ -18,7 +17,7 @@ import {
   FormControlLabel,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
-import Map from "./AddressMap" // Added for address-map
+import Map from "./AddressMap"; // Added for address-map
 const ProfileForm = () => {
   const [userData, setUserData] = useState({
     name: "",
@@ -35,15 +34,16 @@ const ProfileForm = () => {
     correspondenceLatitude: 0,
     correspondenceLongitude: 0,
     lightMotorVehicles: "",
-    lightCommercialVehicles: "", 
-    heavyVehicles: "", 
+    lightCommercialVehicles: "",
+    heavyVehicles: "",
     age: "",
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [sameAddress, setSameAddress] = useState(false);
-  const [vehicles, setVehicles] = useState([]); 
+  //const [vehicles, setVehicles] = useState([]);
+  const [vehicles, setVehicles] = useState({});
   //const [isMapOpen, setIsMapOpen] = useState(false); // To control map modal visibility-new
   const auth = getAuth();
   const user = auth.currentUser;
@@ -72,12 +72,11 @@ const ProfileForm = () => {
               permanentLongitude: userProfile.permanentLongitude || "",
               correspondenceAddress: userProfile.correspondenceAddress || "",
               correspondenceLatitude: userProfile.correspondenceLatitude || "",
-              correspondenceLongitude: userProfile.correspondenceLongitude || "",
+              correspondenceLongitude:
+                userProfile.correspondenceLongitude || "",
               age: calculateAge(userProfile.dob) || "",
             });
-            setVehicles(
-              Array.isArray(userProfile.vehicles) ? userProfile.vehicles : []
-            );
+            setVehicles(userProfile.vehicles || {});
           } else {
             setError("No user data found. Please complete your profile.");
           }
@@ -91,8 +90,7 @@ const ProfileForm = () => {
 
     fetchData();
   }, [user]);
-  
-  
+
   // Calculate age based on the date of birth (DOB)
   const calculateAge = (dob) => {
     if (!dob) return "";
@@ -145,20 +143,19 @@ const ProfileForm = () => {
     }
   };
 
-  
   const handleAddressCheckbox = (event) => {
     const checked = event.target.checked;
     setSameAddress(checked);
-  
+
     if (checked) {
-      setUserData(prev => ({
+      setUserData((prev) => ({
         ...prev,
         correspondenceAddress: prev.permanentAddress,
         correspondenceLatitude: prev.permanentLatitude,
         correspondenceLongitude: prev.permanentLongitude,
       }));
     } else {
-      setUserData(prev => ({
+      setUserData((prev) => ({
         ...prev,
         correspondenceAddress: "",
         correspondenceLatitude: "",
@@ -166,81 +163,103 @@ const ProfileForm = () => {
       }));
     }
   };
-  
-  
+
   const handlePermanentLocationSelect = async (lat, lng) => {
-    setUserData(prev => ({
+    setUserData((prev) => ({
       ...prev,
       permanentLatitude: lat,
       permanentLongitude: lng,
     }));
-  
+
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
       );
       const data = await response.json();
-  
-      setUserData(prev => ({
+
+      setUserData((prev) => ({
         ...prev,
         permanentAddress: data?.display_name || "Address not found",
       }));
     } catch (error) {
       console.error("Error fetching address:", error);
-      setUserData(prev => ({
+      setUserData((prev) => ({
         ...prev,
         permanentAddress: "Failed to fetch address",
       }));
     }
-  
+
     setIsPermanentMapOpen(false);
   };
-  
+
   const handleCorrespondenceLocationSelect = async (lat, lng) => {
-    setUserData(prev => ({
+    setUserData((prev) => ({
       ...prev,
       correspondenceLatitude: lat,
       correspondenceLongitude: lng,
     }));
-  
+
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
       );
       const data = await response.json();
-  
-      setUserData(prev => ({
+
+      setUserData((prev) => ({
         ...prev,
         correspondenceAddress: data?.display_name || "Address not found",
       }));
     } catch (error) {
       console.error("Error fetching address:", error);
-      setUserData(prev => ({
+      setUserData((prev) => ({
         ...prev,
         correspondenceAddress: "Failed to fetch address",
       }));
     }
-  
+
     setIsCorrespondenceMapOpen(false);
   };
-  
 
-  //Handle vehicles 
+  // Add a new empty vehicle with default type and number
   const handleAddVehicle = () => {
-    setVehicles([...vehicles, { type: "", number: "" }]);
+    setVehicles({
+      ...vehicles,
+      [""]: { type: "" }, // Empty key initially
+    });
   };
 
-  const handleVehicleChange = (index, field, value) => {
-    const updatedVehicles = vehicles.map((vehicle, i) =>
-      i === index ? { ...vehicle, [field]: value } : vehicle
-    );
-    setVehicles(updatedVehicles);
+  // Handle change of vehicle details
+  const handleVehicleChange = (vehicleNumber, field, value) => {
+    // If the vehicle number changes, update key
+    if (field === "number") {
+      const updatedVehicles = { ...vehicles };
+      updatedVehicles[value] = {
+        ...vehicles[vehicleNumber],
+        type: vehicles[vehicleNumber]?.type || "",
+        number: value,
+      };
+      delete updatedVehicles[vehicleNumber]; // Remove old key
+      setVehicles(updatedVehicles);
+    } else {
+      // Update vehicle type
+      setVehicles({
+        ...vehicles,
+        [vehicleNumber]: {
+          ...vehicles[vehicleNumber],
+          [field]: value,
+          number: vehicleNumber,
+        },
+      });
+    }
   };
 
   // Handle delete last vehicle
   const handleDeleteVehicle = () => {
-    if (vehicles.length > 0) {
-      const updatedVehicles = vehicles.slice(0, -1); // Remove the last vehicle
+    const vehicleKeys = Object.keys(vehicles);
+    if (vehicleKeys.length > 0) {
+      const lastKey = vehicleKeys[vehicleKeys.length - 1];
+      const updatedVehicles = { ...vehicles };
+      delete updatedVehicles[lastKey];
       setVehicles(updatedVehicles);
     }
   };
@@ -278,7 +297,6 @@ const ProfileForm = () => {
   const handleClose = () => {
     navigate("/dashboard"); // Redirect to dashboard
   };
-
 
   if (loading) {
     return <p>Loading profile...</p>;
@@ -408,81 +426,90 @@ const ProfileForm = () => {
             Permanent Address
           </Typography>
 
-            <TextField
-              fullWidth
-              label="Permanent Address"
-              name="permanentAddress"
-              value={userData.permanentAddress}
-              onChange={handleChange}
-              margin="normal"
-              required
-              multiline
-              rows={3}
-            />
+          <TextField
+            fullWidth
+            label="Permanent Address"
+            name="permanentAddress"
+            value={userData.permanentAddress}
+            onChange={handleChange}
+            margin="normal"
+            required
+            multiline
+            rows={3}
+          />
 
-            <TextField
-              fullWidth
-              label="Permanent Address Latitude"
-              name="permanentLatitude"
-              value={userData.permanentLatitude}
-              margin="normal"
-              required
-              disabled
-            />
+          <TextField
+            fullWidth
+            label="Permanent Address Latitude"
+            name="permanentLatitude"
+            value={userData.permanentLatitude}
+            margin="normal"
+            required
+            disabled
+          />
 
-            <TextField
-              fullWidth
-              label="Permanent Address Longitude"
-              name="permanentLongitude"
-              value={userData.permanentLongitude}
-              margin="normal"
-              required
-              disabled
-            />
+          <TextField
+            fullWidth
+            label="Permanent Address Longitude"
+            name="permanentLongitude"
+            value={userData.permanentLongitude}
+            margin="normal"
+            required
+            disabled
+          />
 
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={() => setIsPermanentMapOpen(true)}
-            >
-              Select Permanent Address on Map
-            </Button>
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={() => setIsPermanentMapOpen(true)}
+          >
+            Select Permanent Address on Map
+          </Button>
 
-          
           {isPermanentMapOpen && (
-          <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}>
             <Box
               sx={{
-                position: "absolute",
-                marginTop: 10,
-                marginLeft: 20,
-                backgroundColor: "black",
-                padding: 2,
-                zIndex: 1000,
-                borderRadius: 2,
-                boxShadow: 3,
-                width: "90vw",
-                height: "90vw",
-                maxWidth: "500px",
-                maxHeight: "500px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center"
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 999,
               }}
             >
-              <Map onLocationSelect={handlePermanentLocationSelect} 
-                sx={{ width: "100%", height: "100%" }} 
-              />
-              <Button
-                variant="outlined"
-                onClick={() => setIsPermanentMapOpen(false)}
-                sx={{ marginTop: 2 }}
+              <Box
+                sx={{
+                  position: "absolute",
+                  marginTop: 10,
+                  marginLeft: 20,
+                  backgroundColor: "black",
+                  padding: 2,
+                  zIndex: 1000,
+                  borderRadius: 2,
+                  boxShadow: 3,
+                  width: "90vw",
+                  height: "90vw",
+                  maxWidth: "500px",
+                  maxHeight: "500px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                Close Map
-              </Button>
+                <Map
+                  onLocationSelect={handlePermanentLocationSelect}
+                  sx={{ width: "100%", height: "100%" }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={() => setIsPermanentMapOpen(false)}
+                  sx={{ marginTop: 2 }}
+                >
+                  Close Map
+                </Button>
+              </Box>
             </Box>
-          </Box>
           )}
 
           <FormControlLabel
@@ -527,7 +554,6 @@ const ProfileForm = () => {
             required
             disabled
           />
-
           <Button
             type="button"
             variant="outlined"
@@ -536,9 +562,18 @@ const ProfileForm = () => {
           >
             Select Correspondence Address on Map
           </Button>
-          
+
           {isCorrespondenceMapOpen && (
-            <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}>
+            <Box
+              sx={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 999,
+              }}
+            >
               <Box
                 sx={{
                   position: "absolute",
@@ -556,11 +591,12 @@ const ProfileForm = () => {
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  justifyContent: "center"
+                  justifyContent: "center",
                 }}
               >
-                <Map onLocationSelect={handleCorrespondenceLocationSelect} 
-                  sx={{ width: "100%", height: "100%" }} 
+                <Map
+                  onLocationSelect={handleCorrespondenceLocationSelect}
+                  sx={{ width: "100%", height: "100%" }}
                 />
                 <Button
                   variant="outlined"
@@ -572,56 +608,69 @@ const ProfileForm = () => {
               </Box>
             </Box>
           )}
-          
-          <Typography sx={{ marginTop: 1, marginBottom: 1 }}>
-            Vehicle Details
-          </Typography>
-          {vehicles.map((vehicle, index) => (
-            <Box key={index} sx={{ display: "flex", gap: 2, marginBottom: 2 }}>
-              <FormControl fullWidth required>
-                <InputLabel>Vehicle Type</InputLabel>
-                <Select
-                  value={vehicle.type}
+
+          <Box>
+            <Typography sx={{ marginTop: 1, marginBottom: 1 }}>
+              Vehicle Details
+            </Typography>
+
+            {/* Map through vehicles object and render inputs */}
+            {Object.entries(vehicles).map(([vehicleNumber, vehicle], index) => (
+              <Box
+                key={index}
+                sx={{ display: "flex", gap: 2, marginBottom: 2 }}
+              >
+                {/* Vehicle Type */}
+                <FormControl fullWidth required>
+                  <InputLabel>Vehicle Type</InputLabel>
+                  <Select
+                    value={vehicle.type}
+                    onChange={(e) =>
+                      handleVehicleChange(vehicleNumber, "type", e.target.value)
+                    }
+                  >
+                    <MenuItem value="LMV">LMV</MenuItem>
+                    <MenuItem value="LMV-TR">LMV-TR</MenuItem>
+                    <MenuItem value="TRANS">TRANS</MenuItem>
+                  </Select>
+                </FormControl>
+
+                {/* Vehicle Number */}
+                <TextField
+                  fullWidth
+                  label="Vehicle Number"
+                  value={vehicleNumber}
                   onChange={(e) =>
-                    handleVehicleChange(index, "type", e.target.value)
+                    handleVehicleChange(vehicleNumber, "number", e.target.value)
                   }
-                >
-                  <MenuItem value="LMV">LMV</MenuItem>
-                  <MenuItem value="LMV-TR">LMV-TR</MenuItem>
-                  <MenuItem value="TRANS">TRANS</MenuItem>
-                </Select>
-              </FormControl>
-              <TextField
-                fullWidth
-                label="Vehicle Number"
-                value={vehicle.number}
-                onChange={(e) =>
-                  handleVehicleChange(index, "number", e.target.value)
-                }
-                required
-              />
-            </Box>
-          ))}
-          <Button
-            type="button"
-            variant="outlined"
-            onClick={handleAddVehicle}
-            sx={{ marginBottom: 2 }}
-          >
-            Add Vehicle
-          </Button>
+                  required
+                />
+              </Box>
+            ))}
+
+            {/* Add Vehicle Button */}
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={handleAddVehicle}
+              sx={{ marginBottom: 2 }}
+            >
+              Add Vehicle
+            </Button>
+
+            {/* Delete Last Vehicle Button */}
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={handleDeleteVehicle}
+              sx={{ marginBottom: 2, marginLeft: 2 }}
+              disabled={Object.keys(vehicles).length === 0}
+            >
+              Delete Last Vehicle
+            </Button>
+          </Box>
 
           <Button
-            type="button"
-            variant="outlined"
-            onClick={handleDeleteVehicle}
-            sx={{ marginBottom: 2, marginLeft: 20}}
-            disabled={vehicles.length === 0} // Disable if no vehicles
-          >
-            Delete Last Vehicle
-          </Button>
-
-         <Button
             type="submit"
             variant="contained"
             color="primary"
