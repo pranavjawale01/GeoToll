@@ -587,7 +587,7 @@ object FirebaseHelper {
      * ```
      */
     fun getPermanentAddressCoordinates(userId: String): BoundingBoxChecker.Coordinates {
-        val permanentAddressRef = database.child("user").child(userId).child("permanentAddress").child("coordinates")
+        val permanentAddressRef = database.child("user").child(userId).child("permanentAddressData").child("coordinates")
 
         var coordinates = BoundingBoxChecker.Coordinates(0.0, 0.0)
 
@@ -622,7 +622,7 @@ object FirebaseHelper {
      * ```
      */
     fun getResidentialAddressCoordinates(userId: String): BoundingBoxChecker.Coordinates {
-        val residentialAddressRef = database.child("user").child(userId).child("residentialAddress").child("coordinates")
+        val residentialAddressRef = database.child("user").child(userId).child("residentialAddressData").child("coordinates")
 
         var coordinates = BoundingBoxChecker.Coordinates(0.0, 0.0)
         residentialAddressRef.get().addOnSuccessListener { dataSnapshot ->
@@ -637,7 +637,6 @@ object FirebaseHelper {
 
 
     data class BoundingBox(val xMin: Double, val yMin: Double, val xMax: Double, val yMax: Double)
-
 
     /**
      * Retrieves the bounding box of a specified address type (e.g., permanent or residential) from Firebase.

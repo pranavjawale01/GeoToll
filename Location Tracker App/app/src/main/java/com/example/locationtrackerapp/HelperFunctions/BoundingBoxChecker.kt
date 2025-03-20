@@ -18,7 +18,7 @@ object BoundingBoxChecker {
 
         // Permanent Address
         val permanentCoordinates = FirebaseHelper.getPermanentAddressCoordinates(userId)
-        val existingPermanentBoundingBox = FirebaseHelper.getBoundingBox(userId, "permanentAddress")
+        val existingPermanentBoundingBox = FirebaseHelper.getBoundingBox(userId, "permanentAddressData")
 
         permanentBoundingBox = ((existingPermanentBoundingBox as? JSONObject)?.let { box ->
             BoundingBox(
@@ -29,14 +29,14 @@ object BoundingBoxChecker {
             )
         } ?: run {
             val boundingBox = BoundingBoxHelper.getBoundingBoxGeoapify(permanentCoordinates.lat, permanentCoordinates.lon, apiKey)
-            FirebaseHelper.checkAndSaveBoundingBox(userId, "permanentAddress", boundingBox)
+            FirebaseHelper.checkAndSaveBoundingBox(userId, "permanentAddressData", boundingBox)
             boundingBox
         }) as BoundingBox?
 
 
         // Residential Address
         val residentialCoordinates = FirebaseHelper.getResidentialAddressCoordinates(userId)
-        val existingResidentialBoundingBox = FirebaseHelper.getBoundingBox(userId, "residentialAddress")
+        val existingResidentialBoundingBox = FirebaseHelper.getBoundingBox(userId, "residentialAddressData")
 
         residentialBoundingBox = ((existingResidentialBoundingBox as? JSONObject)?.let { box ->
             BoundingBox(
@@ -47,7 +47,7 @@ object BoundingBoxChecker {
             )
         } ?: run {
             val boundingBox = BoundingBoxHelper.getBoundingBoxGeoapify(residentialCoordinates.lat, residentialCoordinates.lon, apiKey)
-            FirebaseHelper.checkAndSaveBoundingBox(userId, "residentialAddress", boundingBox)
+            FirebaseHelper.checkAndSaveBoundingBox(userId, "residentialAddressData", boundingBox)
             boundingBox
         }) as BoundingBox?
     }
