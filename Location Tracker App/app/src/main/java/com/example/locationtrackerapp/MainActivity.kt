@@ -22,7 +22,6 @@ import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.example.locationtrackerapp.HelperFunctions.BoundingBoxChecker
 import com.example.locationtrackerapp.HelperFunctions.DistanceCalculator
 import com.example.locationtrackerapp.HelperFunctions.FirebaseHelper
 import com.example.locationtrackerapp.HelperFunctions.SpeedCalculator
@@ -129,20 +128,7 @@ class MainActivity : ComponentActivity() {
             // Fetch vehicles only if user ID is not null or blank
             val userId = user?.uid
 
-            if (isGpsAvailable() && !isGpsWorking()) {
-                userId?.let { FirebaseHelper.sendGpsStatusToFirebase(userId, false) }
-                println("GPS is available but not working, reported to Firebase")
-                sendGpsNotWorkingNotification()
-            }
-
-            BoundingBoxChecker.fetchBoundingBoxes(user!!.uid) { permBox, resBox ->
-                if (permBox != null) {
-                    println("Permanent Address Bounding Box: $permBox")
-                }
-                if (resBox != null) {
-                    println("Residential Address Bounding Box: $resBox")
-                }
-            }
+            BoundingBoxChecker.getBoundingBox(user!!.uid)
 
             if (!userId.isNullOrBlank()) {
                 fun fetchAndPopulateVehicles() {
@@ -236,6 +222,11 @@ class MainActivity : ComponentActivity() {
                 user?.uid?.let { userId ->
                     currentVehicleId?.let { vehicleId ->
                         getVehicleData(userId, vehicleId)
+                        if (isGpsAvailable() && !isGpsWorking()) {
+                            userId?.let { FirebaseHelper.sendGpsStatusToFirebase(userId, false) }
+                            println("GPS is available but not working, reported to Firebase")
+                            sendGpsNotWorkingNotification()
+                        }
                     }
                 }
             } else {
@@ -371,10 +362,10 @@ class MainActivity : ComponentActivity() {
 
                     // Save the location and highway status
                     user?.let {
-                        val isInsideBoundingBox = BoundingBoxChecker.isLocationInsideBoundingBox(location.latitude, location.longitude)
+                        val isInsideBoundingBox = BoundingBoxChecker.isCoordinateInsideBoundingBox(location.latitude, location.longitude)
                         println("Is inside bounding box? $isInsideBoundingBox")
                         currentVehicleId?.let { vehicleId ->
-                            FirebaseHelper.saveLocation(it.uid, vehicleId, location.latitude, location.longitude, isOnHighway, isInsideBoundingBox)
+                            FirebaseHelper.saveLocation(it.uid, vehicleId, location.latitude, location.longitude, !isOnHighway, isInsideBoundingBox)
                         }
                     }
                 }

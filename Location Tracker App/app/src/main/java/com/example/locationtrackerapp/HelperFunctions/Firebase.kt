@@ -1,12 +1,9 @@
 package com.example.locationtrackerapp.HelperFunctions
 
-import BoundingBox
-import android.R
 import android.icu.text.SimpleDateFormat
 import android.location.Location
 import android.os.Build
 import android.util.Log
-import android.widget.ArrayAdapter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import com.google.firebase.database.ktx.database
@@ -596,8 +593,8 @@ object FirebaseHelper {
 
         // Attempt to fetch coordinates asynchronously
         permanentAddressRef.get().addOnSuccessListener { dataSnapshot ->
-            val lat = dataSnapshot.child("lat").getValue(Double::class.java) ?: 0.0
-            val lon = dataSnapshot.child("lon").getValue(Double::class.java) ?: 0.0
+            val lat = dataSnapshot.child("latitude").getValue(Double::class.java) ?: 0.0
+            val lon = dataSnapshot.child("longitude").getValue(Double::class.java) ?: 0.0
             coordinates = BoundingBoxChecker.Coordinates(lat, lon)
             println("Coordinates fetched: $coordinates")
         }.addOnFailureListener { e ->
@@ -629,14 +626,17 @@ object FirebaseHelper {
 
         var coordinates = BoundingBoxChecker.Coordinates(0.0, 0.0)
         residentialAddressRef.get().addOnSuccessListener { dataSnapshot ->
-            val lat = dataSnapshot.child("lat").getValue(Double::class.java) ?: 0.0
-            val lon = dataSnapshot.child("lon").getValue(Double::class.java) ?: 0.0
+            val lat = dataSnapshot.child("latitude").getValue(Double::class.java) ?: 0.0
+            val lon = dataSnapshot.child("longitude").getValue(Double::class.java) ?: 0.0
             coordinates = BoundingBoxChecker.Coordinates(lat, lon)
         }.addOnFailureListener { e ->
             println("Error fetching residential address coordinates: ${e.message}")
         }
         return coordinates
     }
+
+
+    data class BoundingBox(val xMin: Double, val yMin: Double, val xMax: Double, val yMax: Double)
 
 
     /**
@@ -655,21 +655,20 @@ object FirebaseHelper {
      * /user/{userId}/{addressType}/boundingBox
      * ```
      */
-    fun getBoundingBox(userId: String, addressType: String): BoundingBoxChecker.PermanentAddressBoundingBox? {
+    fun getBoundingBox(userId: String, addressType: String): BoundingBox? {
         val boundingBoxRef = database.child("user").child(userId).child(addressType).child("boundingBox")
 
-        var boundingBox: BoundingBoxChecker.PermanentAddressBoundingBox? = null
-        boundingBoxRef.get().addOnSuccessListener { dataSnapshot ->
-            if (dataSnapshot.exists()) {
-                val xMin = dataSnapshot.child("xMin").getValue(Double::class.java) ?: 0.0
-                val yMin = dataSnapshot.child("yMin").getValue(Double::class.java) ?: 0.0
-                val xMax = dataSnapshot.child("xMax").getValue(Double::class.java) ?: 0.0
-                val yMax = dataSnapshot.child("yMax").getValue(Double::class.java) ?: 0.0
-                boundingBox = BoundingBoxChecker.PermanentAddressBoundingBox(xMin, yMin, xMax, yMax)
-            }
-        }.addOnFailureListener { e ->
-            println("Error fetching bounding box for $addressType: ${e.message}")
+        var boundingBox: BoundingBox? = null
+        val dataSnapshot = boundingBoxRef.get().getResult()
+
+        if (dataSnapshot != null && dataSnapshot.exists()) {
+            val xMin = dataSnapshot.child("xMin").getValue(Double::class.java) ?: 0.0
+            val yMin = dataSnapshot.child("yMin").getValue(Double::class.java) ?: 0.0
+            val xMax = dataSnapshot.child("xMax").getValue(Double::class.java) ?: 0.0
+            val yMax = dataSnapshot.child("yMax").getValue(Double::class.java) ?: 0.0
+            boundingBox = BoundingBox(xMin, yMin, xMax, yMax)
         }
+
         return boundingBox
     }
 
@@ -692,14 +691,20 @@ object FirebaseHelper {
      * - If it doesn't exist, the bounding box is saved to Firebase.
      * - Errors during the process are logged with the appropriate error message.
      */
-    fun checkAndSaveBoundingBox(userId: String, addressType: String, boundingBox: BoundingBox.BoundingBox) {
+    fun checkAndSaveBoundingBox(userId: String, addressType: String, boundingBox: BoundingBoxHelper.BoundingBox) {
         val boundingBoxRef = database.child("user").child(userId).child(addressType).child("boundingBox")
 
         boundingBoxRef.get().addOnSuccessListener { dataSnapshot ->
             if (dataSnapshot.exists()) {
                 println("Bounding box already exists: ${dataSnapshot.value}")
             } else {
-                boundingBoxRef.setValue(boundingBox)
+                val boundingBoxMap = mapOf(
+                    "xMin" to boundingBox.xMin,
+                    "yMin" to boundingBox.yMin,
+                    "xMax" to boundingBox.xMax,
+                    "yMax" to boundingBox.yMax
+                )
+                boundingBoxRef.setValue(boundingBoxMap)
                     .addOnSuccessListener {
                         println("Bounding box saved successfully.")
                     }
