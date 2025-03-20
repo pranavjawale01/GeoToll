@@ -75,9 +75,9 @@ const UserMap = ({ locations }) => {
       segments.forEach((segment) => {
         // Determine color based on the isOnHighway value
         let color;
-        if (segment.isOnHighway === 1) {
+        if (segment.isOnHighway === 1 || segment.isOnHighway === true) {
           color = "blue"; // Highway
-        } else if (segment.isOnHighway === 0) {
+        } else if (segment.isOnHighway === 0 || segment.isOnHighway === false) {
           color = "red"; // Service road or alternate route
         } else if (segment.isOnHighway === 2) {
           color = "yellow"; // New condition for isOnHighway === 2

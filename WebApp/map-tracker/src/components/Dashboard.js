@@ -81,10 +81,22 @@ const Dashboard = () => {
       );
       const snapshot = await get(vehicleRef);
       if (snapshot.exists()) {
-        const dates = Object.keys(snapshot.val()).sort();
-        setAvailableDates(dates);
+        const data = snapshot.val();
+
+        // Extract only valid date keys (dd-mm-yyyy format)
+        const dateRegex = /^\d{2}-\d{2}-\d{4}$/; // Regex to match dd-mm-yyyy
+        const dates = Object.keys(data).filter((key) => dateRegex.test(key));
+        // Sort dates in dd-mm-yyyy format
+        const sortedDates = dates.sort((a, b) => {
+          const [dayA, monthA, yearA] = a.split("-").map(Number);
+          const [dayB, monthB, yearB] = b.split("-").map(Number);
+          return (
+            new Date(yearA, monthA - 1, dayA) -
+            new Date(yearB, monthB - 1, dayB)
+          );
+        });
+        setAvailableDates(sortedDates);
       } else {
-        console.log("No dates found for the selected vehicle");
         setAvailableDates([]);
       }
     } catch (error) {
@@ -95,7 +107,7 @@ const Dashboard = () => {
   // Set default selected date only when the component first loads or when availableDates are updated for the first time
   useEffect(() => {
     if (availableDates.length > 0 && !isDateManuallySelected) {
-      setSelectedDate(availableDates[availableDates.length - 3]); // Default to the latest date
+      setSelectedDate(availableDates[availableDates.length - 1]); // Default to the latest date
     }
   }, [availableDates, isDateManuallySelected]);
 
@@ -197,21 +209,6 @@ const Dashboard = () => {
                 selectedVehicle={selectedVehicle}
                 selectedDate={selectedDate}
                 onLocationsUpdate={setLocations}
-                onAvailableDatesUpdate={(dates) => {
-                  const sortedDates = dates
-                    .map((date) => {
-                      // Split the dd/mm/yyyy format
-                      const [day, month, year] = date.split("-").map(Number);
-
-                      return {
-                        original: date,
-                        sortable: new Date(year, month - 1, day), // Convert to Date object
-                      };
-                    })
-                    .sort((a, b) => a.sortable - b.sortable) // Sort by Date object
-                    .map((item) => item.original); // Extract the original dd/mm/yyyy format
-                  setAvailableDates(sortedDates); // Update state with sorted dates
-                }}
               />
 
               {locations.length > 0 && (
