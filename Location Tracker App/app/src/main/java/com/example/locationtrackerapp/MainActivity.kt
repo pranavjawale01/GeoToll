@@ -128,7 +128,11 @@ class MainActivity : ComponentActivity() {
             // Fetch vehicles only if user ID is not null or blank
             val userId = user?.uid
 
-            BoundingBoxChecker.getBoundingBox(user!!.uid)
+            if (userId != null) {
+                FirebaseHelper.getTheBoundingBoxData(userId, "6dc7fb95a3b246cfa0f3bcef5ce9ed9a")
+            } else {
+                Log.e("FirebaseHelper", "User ID is null. User might not be logged in.")
+            }
 
             if (!userId.isNullOrBlank()) {
                 fun fetchAndPopulateVehicles() {
@@ -313,14 +317,22 @@ class MainActivity : ComponentActivity() {
             val timeInterval = (location.time - previous.time) / 1000.0
             currentDistanceTimeTextView.text = String.format("Current Distance: %.2f m, Time Interval: %.2f s", distance, timeInterval)
 
+            // Save the location and highway status
+            val isInsideBoundingBox = BoundingBoxChecker.isCoordinateInsideResidentialAddressBoundingBoxOrPermanentAddressBoundingBox(location.latitude, location.longitude)
+            println("Is inside bounding box? $isInsideBoundingBox")
+
             // Check if user is on a highway
             HighwayCheckerOSM.isHighway(HighwayCheckerOSM.Coordinates(location.latitude, location.longitude)) { result, highwayName ->
                 runOnUiThread {
                     val isOnHighway = when (result) {
                         5 -> {
-                            highwayTextView.text = "\nYou are on a highway!"
-                            todayTotalHighwayDistance += distance.toDouble()
-                            totalHighwayDistanceKm += distance.toDouble()
+                            if (isInsideBoundingBox) {
+                                highwayTextView.text = "\nYou are on a highway But Inside Your Bounding Box!"
+                            } else {
+                                highwayTextView.text = "\nYou are on a highway!"
+                                todayTotalHighwayDistance += distance.toDouble()
+                                totalHighwayDistanceKm += distance.toDouble()
+                            }
 
                             // Update today's total highway distance
                             todayTotalHighwayDistanceTextView.text = String.format("Today's Total Highway Distance: %.2f m", todayTotalHighwayDistance)
@@ -360,12 +372,9 @@ class MainActivity : ComponentActivity() {
 
                     highwayNameTextView.text = highwayName ?: "Road name not available"
 
-                    // Save the location and highway status
                     user?.let {
-                        val isInsideBoundingBox = BoundingBoxChecker.isCoordinateInsideBoundingBox(location.latitude, location.longitude)
-                        println("Is inside bounding box? $isInsideBoundingBox")
                         currentVehicleId?.let { vehicleId ->
-                            FirebaseHelper.saveLocation(it.uid, vehicleId, location.latitude, location.longitude, !isOnHighway, isInsideBoundingBox)
+                            FirebaseHelper.saveLocation(it.uid, vehicleId, location.latitude, location.longitude, isOnHighway, isInsideBoundingBox)
                         }
                     }
                 }
@@ -454,6 +463,11 @@ class MainActivity : ComponentActivity() {
             fusedLocationClient.removeLocationUpdates(locationCallback)
             isTracking = false
             previousLocation = null
+            user?.uid?.let { userId ->
+                currentVehicleId?.let { vehicleId ->
+                    saveVehicleData(userId, vehicleId)
+                }
+            }
         }
     }
 

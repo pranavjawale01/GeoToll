@@ -8,6 +8,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Date
 import java.util.Locale
 
@@ -47,7 +50,9 @@ object FirebaseHelper {
                             continue
                         }
 
-                        val vehicleInUse = vehicleSnapshot.child("vehicleInUsed").getValue(Boolean::class.java) ?: false
+                        val vehicleInUse =
+                            vehicleSnapshot.child("vehicleInUsed").getValue(Boolean::class.java)
+                                ?: false
                         if (!vehicleInUse) {
                             vehicleList.add(vehicleId)
                         }
@@ -446,8 +451,9 @@ object FirebaseHelper {
             else -> 0
         }
 
-        val timeNode = database.child("location").child(userId).child("coordinates").child(vehicleId)
-            .child(currentDate).child(currentTime)
+        val timeNode =
+            database.child("location").child(userId).child("coordinates").child(vehicleId)
+                .child(currentDate).child(currentTime)
 
         timeNode.child("latitude").setValue(latitude)
         timeNode.child("longitude").setValue(longitude)
@@ -564,7 +570,10 @@ object FirebaseHelper {
         database.child("GPSFailed").child(userId).child(currentDate).child(currentTime)
             .setValue(gpsStatusData)
             .addOnSuccessListener {
-                Log.d("FirebaseHelper", "GPS status recorded successfully for user $userId at $currentTime on $currentDate")
+                Log.d(
+                    "FirebaseHelper",
+                    "GPS status recorded successfully for user $userId at $currentTime on $currentDate"
+                )
             }
             .addOnFailureListener { error ->
                 Log.e("FirebaseHelper", "Error recording GPS status for user $userId", error)
@@ -572,147 +581,95 @@ object FirebaseHelper {
     }
 
     /**
-     * Retrieves the permanent address coordinates of a user from Firebase.
+     * Fetches the bounding box data for a user from Firebase.
+     * If the data is not available, it fetches the latitude and longitude from Firebase,
+     * calls the Geoapify API to get the bounding box, and stores it in Firebase.
      *
-     * Note: This function will not work correctly because Firebase calls are asynchronous.
-     * The coordinates are fetched using a listener, but the function will return before the data is received.
-     *
-     * @param userId The unique ID of the user whose permanent address coordinates are being retrieved.
-     * @return BoundingBoxChecker.Coordinates containing latitude and longitude.
-     * It will return (0.0, 0.0) if the data is not yet available or in case of an error.
-     *
-     * The coordinates are stored under the following Firebase path:
-     * ```
-     * /user/{userId}/permanentAddress/coordinates
-     * ```
+     * @param userId The ID of the user.
+     * @param apiKey The API key for the Geoapify service.
      */
-    fun getPermanentAddressCoordinates(userId: String): BoundingBoxChecker.Coordinates {
-        val permanentAddressRef = database.child("user").child(userId).child("permanentAddressData").child("coordinates")
+    fun getTheBoundingBoxData(userId: String, apiKey: String) {
+        val userRef = database.child("users").child(userId)
 
-        var coordinates = BoundingBoxChecker.Coordinates(0.0, 0.0)
-
-        // Attempt to fetch coordinates asynchronously
-        permanentAddressRef.get().addOnSuccessListener { dataSnapshot ->
-            val lat = dataSnapshot.child("latitude").getValue(Double::class.java) ?: 0.0
-            val lon = dataSnapshot.child("longitude").getValue(Double::class.java) ?: 0.0
-            coordinates = BoundingBoxChecker.Coordinates(lat, lon)
-            println("Coordinates fetched: $coordinates")
-        }.addOnFailureListener { e ->
-            println("Error fetching permanent address coordinates: ${e.message}")
-        }
-
-        // This will likely return (0.0, 0.0) since the Firebase call is asynchronous
-        return coordinates
-    }
-
-
-    /**
-     * Retrieves the residential address coordinates of a user from Firebase.
-     *
-     * Note: This function will not work correctly because Firebase calls are asynchronous.
-     * The coordinates are fetched using a listener, but the function will return before the data is received.
-     *
-     * @param userId The unique ID of the user whose residential address coordinates are being retrieved.
-     * @return BoundingBoxChecker.Coordinates containing latitude and longitude.
-     * It will return (0.0, 0.0) if the data is not yet available or in case of an error.
-     *
-     * The coordinates are stored under the following Firebase path:
-     * ```
-     * /user/{userId}/residentialAddress/coordinates
-     * ```
-     */
-    fun getResidentialAddressCoordinates(userId: String): BoundingBoxChecker.Coordinates {
-        val residentialAddressRef = database.child("user").child(userId).child("residentialAddressData").child("coordinates")
-
-        var coordinates = BoundingBoxChecker.Coordinates(0.0, 0.0)
-        residentialAddressRef.get().addOnSuccessListener { dataSnapshot ->
-            val lat = dataSnapshot.child("latitude").getValue(Double::class.java) ?: 0.0
-            val lon = dataSnapshot.child("longitude").getValue(Double::class.java) ?: 0.0
-            coordinates = BoundingBoxChecker.Coordinates(lat, lon)
-        }.addOnFailureListener { e ->
-            println("Error fetching residential address coordinates: ${e.message}")
-        }
-        return coordinates
-    }
-
-
-    data class BoundingBox(val xMin: Double, val yMin: Double, val xMax: Double, val yMax: Double)
-
-    /**
-     * Retrieves the bounding box of a specified address type (e.g., permanent or residential) from Firebase.
-     *
-     * Note: This function will not work correctly because Firebase calls are asynchronous.
-     * The bounding box data is fetched using a listener, but the function will return before the data is received.
-     *
-     * @param userId The unique ID of the user whose address bounding box is being retrieved.
-     * @param addressType The type of address ("permanentAddress" or "residentialAddress").
-     * @return BoundingBoxChecker.PermanentAddressBoundingBox containing xMin, yMin, xMax, and yMax coordinates,
-     * or `null` if the data is not available or an error occurs.
-     *
-     * The bounding box data is stored under the following Firebase path:
-     * ```
-     * /user/{userId}/{addressType}/boundingBox
-     * ```
-     */
-    fun getBoundingBox(userId: String, addressType: String): BoundingBox? {
-        val boundingBoxRef = database.child("user").child(userId).child(addressType).child("boundingBox")
-
-        var boundingBox: BoundingBox? = null
-        val dataSnapshot = boundingBoxRef.get().getResult()
-
-        if (dataSnapshot != null && dataSnapshot.exists()) {
-            val xMin = dataSnapshot.child("xMin").getValue(Double::class.java) ?: 0.0
-            val yMin = dataSnapshot.child("yMin").getValue(Double::class.java) ?: 0.0
-            val xMax = dataSnapshot.child("xMax").getValue(Double::class.java) ?: 0.0
-            val yMax = dataSnapshot.child("yMax").getValue(Double::class.java) ?: 0.0
-            boundingBox = BoundingBox(xMin, yMin, xMax, yMax)
-        }
-
-        return boundingBox
-    }
-
-
-    /**
-     * Checks if a bounding box exists for a specified address type (e.g., permanent or residential) in Firebase.
-     * If it doesn't exist, the function saves the provided bounding box data.
-     *
-     * @param userId The unique ID of the user whose bounding box is being checked or saved.
-     * @param addressType The type of address ("permanentAddress" or "residentialAddress").
-     * @param boundingBox The bounding box object containing coordinates (xMin, yMin, xMax, yMax).
-     *
-     * The bounding box is stored under the following Firebase path:
-     * ```
-     * /user/{userId}/{addressType}/boundingBox
-     * ```
-     *
-     * Behavior:
-     * - If the bounding box already exists, a message is printed with the existing data.
-     * - If it doesn't exist, the bounding box is saved to Firebase.
-     * - Errors during the process are logged with the appropriate error message.
-     */
-    fun checkAndSaveBoundingBox(userId: String, addressType: String, boundingBox: BoundingBoxHelper.BoundingBox) {
-        val boundingBoxRef = database.child("user").child(userId).child(addressType).child("boundingBox")
-
-        boundingBoxRef.get().addOnSuccessListener { dataSnapshot ->
-            if (dataSnapshot.exists()) {
-                println("Bounding box already exists: ${dataSnapshot.value}")
-            } else {
-                val boundingBoxMap = mapOf(
-                    "xMin" to boundingBox.xMin,
-                    "yMin" to boundingBox.yMin,
-                    "xMax" to boundingBox.xMax,
-                    "yMax" to boundingBox.yMax
+        // Fetch and process residential address bounding box
+        fetchAndProcessBoundingBox(
+            userRef.child("residentialAddressData"),
+            apiKey,
+            onSuccess = { boundingBox ->
+                BoundingBoxChecker.residentialAddressBoundingBox = boundingBox
+                Log.d(
+                    "BoundingBoxChecker",
+                    "Residential Bounding Box fetched/processed: $boundingBox"
                 )
-                boundingBoxRef.setValue(boundingBoxMap)
-                    .addOnSuccessListener {
-                        println("Bounding box saved successfully.")
-                    }
-                    .addOnFailureListener { e ->
-                        println("Error saving bounding box: ${e.message}")
-                    }
+            },
+            onError = { error ->
+                Log.e("BoundingBoxChecker", "Error processing residential bounding box", error)
             }
-        }.addOnFailureListener { e ->
-            println("Error checking bounding box: ${e.message}")
-        }
+        )
+
+        // Fetch and process permanent address bounding box
+        fetchAndProcessBoundingBox(
+            userRef.child("permanentAddressData"),
+            apiKey,
+            onSuccess = { boundingBox ->
+                BoundingBoxChecker.permanentAddressBoundingBox = boundingBox
+                Log.d(
+                    "BoundingBoxChecker",
+                    "Permanent Bounding Box fetched/processed: $boundingBox"
+                )
+            },
+            onError = { error ->
+                Log.e("BoundingBoxChecker", "Error processing permanent bounding box", error)
+            }
+        )
+    }
+
+    private fun fetchAndProcessBoundingBox(
+        addressRef: DatabaseReference,
+        apiKey: String,
+        onSuccess: (BoundingBoxChecker.BoundingBox) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        addressRef.child("boundingBox").addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (snapshot.exists()) {
+                    // Bounding box data exists in Firebase
+                    val xMin = snapshot.child("xmin").getValue(Double::class.java) ?: 0.0
+                    val yMin = snapshot.child("ymin").getValue(Double::class.java) ?: 0.0
+                    val xMax = snapshot.child("xmax").getValue(Double::class.java) ?: 0.0
+                    val yMax = snapshot.child("ymax").getValue(Double::class.java) ?: 0.0
+                    val boundingBox = BoundingBoxChecker.BoundingBox(xMin, yMin, xMax, yMax)
+                    onSuccess(boundingBox)
+                } else {
+                    // Fetch latitude and longitude for the address
+                    addressRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(addressSnapshot: DataSnapshot) {
+                            val lat = addressSnapshot.child("latitude").getValue(Double::class.java) ?: 0.0
+                            val lon = addressSnapshot.child("longitude").getValue(Double::class.java) ?: 0.0
+
+                            // Launch a coroutine to call the suspend function
+                            CoroutineScope(Dispatchers.IO).launch {
+                                try {
+                                    val boundingBox = BoundingBoxChecker.getBoundingBoxGeoapify(lat, lon, apiKey)
+                                    onSuccess(boundingBox)
+                                    // Save to Firebase
+                                    addressRef.child("boundingBox").setValue(boundingBox)
+                                } catch (e: Exception) {
+                                    onError(e)
+                                }
+                            }
+                        }
+
+                        override fun onCancelled(error: DatabaseError) {
+                            onError(error.toException())
+                        }
+                    })
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                onError(error.toException())
+            }
+        })
     }
 }
