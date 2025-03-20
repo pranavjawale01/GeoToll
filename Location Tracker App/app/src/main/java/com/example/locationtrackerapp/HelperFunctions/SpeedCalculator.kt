@@ -4,21 +4,35 @@ import android.location.Location
 
 object SpeedCalculator {
 
-    // Function to calculate speed between two locations in km/h
+    /**
+     * Calculates the speed between two locations in kilometers per hour (km/h).
+     *
+     * This function uses the distance between the previous and current location
+     * and the time difference to calculate the speed.
+     *
+     * @param previousLocation The previous location, or null if no previous location exists.
+     * @param currentLocation The current location.
+     * @return The calculated speed in km/h. Returns 0.0 if previousLocation is null or time difference is zero.
+     */
     fun calculateSpeed(previousLocation: Location?, currentLocation: Location): Double {
+        // Return 0 if there is no previous location to compare
         if (previousLocation == null) {
-            return 0.0 // No speed if no previous location
+            return 0.0
         }
 
-        val timeDifferenceInSeconds =
-            (currentLocation.time - previousLocation.time) / 1000.0 // Time difference in seconds
+        // Calculate time difference in seconds
+        val timeDifferenceInSeconds = (currentLocation.time - previousLocation.time) / 1000.0
         if (timeDifferenceInSeconds == 0.0) {
             return 0.0 // Prevent division by zero
         }
 
-        val distanceInMeters = previousLocation.distanceTo(currentLocation) // Distance in meters
-        val speedMetersPerSecond = distanceInMeters / timeDifferenceInSeconds // Speed in m/s
+        // Calculate distance in meters using the Android Location API
+        val distanceInMeters = previousLocation.distanceTo(currentLocation)
 
-        return speedMetersPerSecond * 3.6 // Convert m/s to km/h
+        // Calculate speed in meters per second (m/s)
+        val speedMetersPerSecond = distanceInMeters / timeDifferenceInSeconds
+
+        // Convert speed from m/s to km/h
+        return speedMetersPerSecond * 3.6
     }
 }

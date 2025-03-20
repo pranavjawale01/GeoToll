@@ -1,113 +1,134 @@
-package com.example.locationtrackerapp.HelperFunctions
-
-import com.google.firebase.database.*
-import okhttp3.*
-import org.json.JSONObject
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 object BoundingBoxChecker {
 
-    private val database: DatabaseReference by lazy {
-        FirebaseDatabase.getInstance().reference
-    }
+    data class BoundingBox(
+        val xmin: Double,
+        val ymin: Double,
+        val xmax: Double,
+        val ymax: Double
+    )
 
-    private const val NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse?format=json&lat=%s&lon=%s"
+    var permanentAddressBoundingBox: BoundingBox? = null
+    var residentialAddressBoundingBox: BoundingBox? = null
 
-    // Data class to hold bounding box information
-    data class BoundingBox(val minLat: Double, val maxLat: Double, val minLon: Double, val maxLon: Double) {
-        fun contains(lat: Double, lon: Double): Boolean {
-            return lat in minLat..maxLat && lon in minLon..maxLon
+    private val client = HttpClient(CIO) {
+        install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+            json(Json {
+                prettyPrint = true
+                isLenient = true
+            })
         }
     }
 
-    private var permanentBoundingBox: BoundingBox? = null
-    private var residentialBoundingBox: BoundingBox? = null
 
-    // Fetch bounding box from Nominatim API
-    private fun fetchNominatimData(lat: Double, lon: Double): BoundingBox? {
-        val client = OkHttpClient()
-        val url = NOMINATIM_URL.format(lat, lon)
-        val request = Request.Builder().url(url).header("User-Agent", "Mozilla/5.0").build()
-
+    suspend fun getBoundingBoxGeoapify(lat: Double, lon: Double, apiKey: String): BoundingBox {
         return try {
-            val response = client.newCall(request).execute()
-            val json = JSONObject(response.body?.string() ?: "{}")
+            val url = "https://api.geoapify.com/v1/geocode/reverse"
+            val params = mapOf(
+                "lat" to lat.toString(),
+                "lon" to lon.toString(),
+                "format" to "json",
+                "type" to "city",
+                "apiKey" to apiKey
+            )
 
-            val boundingBoxArray = json.getJSONArray("boundingbox")
-            val minLat = boundingBoxArray.getString(0).toDouble()
-            val maxLat = boundingBoxArray.getString(1).toDouble()
-            val minLon = boundingBoxArray.getString(2).toDouble()
-            val maxLon = boundingBoxArray.getString(3).toDouble()
+            val response: HttpResponse = withContext(Dispatchers.IO) {
+                client.get(url) {
+                    url {
+                        params.forEach { (key, value) ->
+                            parameters.append(key, value)
+                        }
+                    }
+                }
+            }
 
-            BoundingBox(minLat, maxLat, minLon, maxLon)
+            when (response.status) {
+                HttpStatusCode.OK -> {
+                    val json = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+                    val results = json["results"]?.jsonArray
+
+                    if (!results.isNullOrEmpty()) {
+                        val result = results[0].jsonObject
+                        println("API Response: $result")
+
+                        if (result.containsKey("bbox")) {
+                            val bbox = result["bbox"]!!.jsonObject
+                            val lon1 = bbox["lon1"]!!.jsonPrimitive.content.toDouble()
+                            val lat1 = bbox["lat1"]!!.jsonPrimitive.content.toDouble()
+                            val lon2 = bbox["lon2"]!!.jsonPrimitive.content.toDouble()
+                            val lat2 = bbox["lat2"]!!.jsonPrimitive.content.toDouble()
+
+                            println("Bounding Box (xMin, yMin, xMax, yMax): ($lon1, $lat1, $lon2, $lat2)")
+                            BoundingBox(lon1, lat1, lon2, lat2)
+                        } else {
+                            throw Exception("Bounding box not available for the provided coordinates.")
+                        }
+                    } else {
+                        throw Exception("No results found for the coordinates.")
+                    }
+                }
+                else -> throw Exception("API Error: ${response.status}, ${response.bodyAsText()}")
+            }
         } catch (e: Exception) {
-            println("Error fetching data: ${e.message}")
-            null
+            // Log the exception or handle it as needed
+            println("Error: ${e.message}")
+            throw e // Re-throw the exception or return a default BoundingBox if applicable
         }
     }
 
     /**
-     * Fetches bounding boxes from Firebase for a given user.
-     * @param userId The ID of the user.
-     * @param onComplete Callback that returns the bounding boxes.
+     * Checks if a given coordinate is inside the residential or permanent address bounding box.
+     *
+     * @param latitude The latitude of the coordinate.
+     * @param longitude The longitude of the coordinate.
+     * @return `true` if the coordinate is inside either bounding box, `false` otherwise.
      */
-    fun fetchBoundingBoxes(userId: String, onComplete: (BoundingBox?, BoundingBox?) -> Unit) {
-        val userRef = database.child("users/$userId")
+    fun isCoordinateInsideResidentialAddressBoundingBoxOrPermanentAddressBoundingBox(latitude: Double, longitude: Double): Boolean {
+        val residentialBox = residentialAddressBoundingBox
+        val permanentBox = permanentAddressBoundingBox
 
-        userRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val permLat = snapshot.child("permanent_address").child("lat").getValue(Double::class.java)
-                val permLon = snapshot.child("permanent_address").child("lon").getValue(Double::class.java)
-                val resLat = snapshot.child("residential_address").child("lat").getValue(Double::class.java)
-                val resLon = snapshot.child("residential_address").child("lon").getValue(Double::class.java)
-
-                if (permLat != null && permLon != null) {
-                    permanentBoundingBox = fetchNominatimData(permLat, permLon)
-                    permanentBoundingBox?.let { saveBoundingBoxToFirebase(userId, "permanent_address", "permanent_address_bounding_box", it) }
-                }
-
-                if (resLat != null && resLon != null) {
-                    residentialBoundingBox = fetchNominatimData(resLat, resLon)
-                    residentialBoundingBox?.let { saveBoundingBoxToFirebase(userId, "residential_address", "residential_address_bounding_box", it) }
-                }
-
-                onComplete(permanentBoundingBox, residentialBoundingBox)
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                onComplete(null, null)
-            }
-        })
+        return (residentialBox != null && isCoordinateInsideBoundingBox(latitude, longitude, residentialBox)) ||
+                (permanentBox != null && isCoordinateInsideBoundingBox(latitude, longitude, permanentBox))
     }
 
     /**
-     * Gets the already stored bounding boxes without fetching new data.
-     * @return A pair of Permanent and Residential bounding boxes.
+     * Checks if a coordinate is inside a bounding box.
+     *
+     * @param latitude The latitude of the coordinate.
+     * @param longitude The longitude of the coordinate.
+     * @param boundingBox The bounding box to check against.
+     * @return `true` if the coordinate is inside the bounding box, `false` otherwise.
      */
-    fun getBoundingBoxes(): Pair<BoundingBox?, BoundingBox?> {
-        return Pair(permanentBoundingBox, residentialBoundingBox)
+    private fun isCoordinateInsideBoundingBox(latitude: Double, longitude: Double, boundingBox: BoundingBox): Boolean {
+        return longitude >= boundingBox.xmin && longitude <= boundingBox.xmax &&
+                latitude >= boundingBox.ymin && latitude <= boundingBox.ymax
     }
+}
 
-    // Save bounding box data to Firebase
-    private fun saveBoundingBoxToFirebase(userId: String, key: String, key1: String, boundingBox: BoundingBox) {
-        val bboxRef = database.child("users").child(userId).child(key).child(key1)
-        bboxRef.setValue(
-            mapOf(
-                "minLat" to boundingBox.minLat,
-                "maxLat" to boundingBox.maxLat,
-                "minLon" to boundingBox.minLon,
-                "maxLon" to boundingBox.maxLon
-            )
-        )
-    }
+// Example Usage
+suspend fun main() {
+    val latitude = 12.365068
+    val longitude = 76.603595
+    val apiKey = "6dc7fb95a3b246cfa0f3bcef5ce9ed9a"
 
-    /**
-     * Checks if a given location is inside either the Permanent or Residential bounding box.
-     * @param lat Latitude of the location.
-     * @param lon Longitude of the location.
-     * @return `true` if the location is inside any bounding box, otherwise `false`.
-     */
-    fun isLocationInsideBoundingBox(lat: Double, lon: Double): Boolean {
-        return (permanentBoundingBox?.contains(lat, lon) == true) ||
-                (residentialBoundingBox?.contains(lat, lon) == true)
+    try {
+        val boundingBox = BoundingBoxChecker.getBoundingBoxGeoapify(latitude, longitude, apiKey)
+        println(boundingBox)
+    } catch (e: Exception) {
+        println(e.message)
     }
 }
