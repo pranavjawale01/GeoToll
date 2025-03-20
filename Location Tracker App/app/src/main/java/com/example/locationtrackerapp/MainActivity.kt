@@ -335,8 +335,8 @@ class MainActivity : ComponentActivity() {
                             }
 
                             // Update today's total highway distance
-                            todayTotalHighwayDistanceTextView.text = String.format("Today's Total Highway Distance: %.2f m", todayTotalHighwayDistance)
-                            totalHighwayDistanceKmTextView.text = String.format("Total Highway Distance: %.2f km", totalHighwayDistanceKm / 1000.0)
+                            todayTotalHighwayDistanceTextView.text = String.format("Today's Total Highway Distance\n -- %.2f m --", todayTotalHighwayDistance)
+                            totalHighwayDistanceKmTextView.text = String.format("Total Highway Distance\n -- %.2f km --", totalHighwayDistanceKm / 1000.0)
                             true
                         }
                         4 -> {
@@ -463,11 +463,6 @@ class MainActivity : ComponentActivity() {
             fusedLocationClient.removeLocationUpdates(locationCallback)
             isTracking = false
             previousLocation = null
-            user?.uid?.let { userId ->
-                currentVehicleId?.let { vehicleId ->
-                    saveVehicleData(userId, vehicleId)
-                }
-            }
         }
     }
 
@@ -549,10 +544,12 @@ class MainActivity : ComponentActivity() {
         FirebaseHelper.saveTodayTotalDistance(userId, vehicleId, todayTotalDistance)
         FirebaseHelper.saveTotalHighwayDistance(userId, vehicleId, totalHighwayDistanceKm)
         FirebaseHelper.saveTotalDistance(userId, vehicleId, totalDistanceKm)
+        /*
         todayTotalHighwayDistance = 0.0
         todayTotalDistance = 0.0
         totalHighwayDistanceKm = 0.0
         totalDistanceKm = 0.0
+         */
     }
 
     private fun disableUI() {
