@@ -93,7 +93,7 @@ const UserMap = ({ locations }) => {
           frequency: "200px", // distance between arrows
           size: "8px", // arrow size
           fill: true,
-          color: segment.isOnHighway ? "blue" : "red",
+          color: color,
         });
       });
 
