@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { getAuth } from "firebase/auth";
 import { ref, get, update } from "firebase/database";
-import { database } from "../firebase"; // Ensure correct import
+import { database } from "../firebase"; 
+import DeleteIcon from '@mui/icons-material/Delete';
+import IconButton from '@mui/material/IconButton';
 
 import {
   Box,
@@ -27,24 +29,33 @@ const ProfileForm = () => {
     license: "",
     dob: "",
     gender: "",
-    permanentAddress: "",
-    permanentLatitude: 0,
-    permanentLongitude: 0,
-    correspondenceAddress: "",
-    correspondenceLatitude: 0,
-    correspondenceLongitude: 0,
+    // permanentAddress: "",
+    // permanentLatitude: 0,
+    // permanentLongitude: 0,
+    // correspondenceAddress: "",
+    // correspondenceLatitude: 0,
+    // correspondenceLongitude: 0,
     lightMotorVehicles: "",
     lightCommercialVehicles: "",
     heavyVehicles: "",
     age: "",
+    walletBalance: "",
+    permanentAddressData: {
+      latitude: "",
+      longitude: "",
+      permanentAddress: "",
+    },
+    residentialAddressData: {
+      latitude: "",
+      longitude: "",
+      residentialAddress: "",
+    },
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [sameAddress, setSameAddress] = useState(false);
-  //const [vehicles, setVehicles] = useState([]);
   const [vehicles, setVehicles] = useState({});
-  //const [isMapOpen, setIsMapOpen] = useState(false); // To control map modal visibility-new
   const auth = getAuth();
   const user = auth.currentUser;
   const navigate = useNavigate(); // Initialize useNavigate
@@ -67,14 +78,24 @@ const ProfileForm = () => {
               license: userProfile.license || "",
               dob: userProfile.dob || "",
               gender: userProfile.gender || "",
-              permanentAddress: userProfile.permanentAddress || "",
-              permanentLatitude: userProfile.permanentLatitude || "",
-              permanentLongitude: userProfile.permanentLongitude || "",
-              correspondenceAddress: userProfile.correspondenceAddress || "",
-              correspondenceLatitude: userProfile.correspondenceLatitude || "",
-              correspondenceLongitude:
-                userProfile.correspondenceLongitude || "",
+              // permanentAddress: userProfile.permanentAddress || "",
+              // permanentLatitude: userProfile.permanentLatitude || "",
+              // permanentLongitude: userProfile.permanentLongitude || "",
+              // correspondenceAddress: userProfile.correspondenceAddress || "",
+              // correspondenceLatitude: userProfile.correspondenceLatitude || "",
+              // correspondenceLongitude:userProfile.correspondenceLongitude || "",
               age: calculateAge(userProfile.dob) || "",
+              walletBalance: userProfile.walletBalance || "",
+              permanentAddressData: {
+                latitude: userProfile.permanentAddressData?.latitude || "",
+                longitude: userProfile.permanentAddressData?.longitude || "",
+                permanentAddress: userProfile.permanentAddressData?.permanentAddress || "",
+              },
+              residentialAddressData: {
+                latitude: userProfile.residentialAddressData?.latitude || "",
+                longitude: userProfile.residentialAddressData?.longitude || "",
+                residentialAddress: userProfile.residentialAddressData?.residentialAddress || "",
+              },
             });
             setVehicles(userProfile.vehicles || {});
           } else {
@@ -141,84 +162,203 @@ const ProfileForm = () => {
         correspondenceAddress: value,
       });
     }
+
+    //06-04-25
+    if (name.startsWith("permanentAddressData.") || name.startsWith("residentialAddressData.")) {
+      const [parent, child] = name.split(".");
+      setUserData((prevState) => ({
+        ...prevState,
+        [parent]: {
+          ...prevState[parent],
+          [child]: value,
+        },
+      }));
+    } else {
+      setUserData((prevState) => ({
+        ...prevState,
+        [name]: value,
+      }));
+    }
   };
 
+  // const handleAddressCheckbox = (event) => {
+  //   const checked = event.target.checked;
+  //   setSameAddress(checked);
+
+  //   if (checked) {
+  //     setUserData((prev) => ({
+  //       ...prev,
+  //       correspondenceAddress: prev.permanentAddress,
+  //       correspondenceLatitude: prev.permanentLatitude,
+  //       correspondenceLongitude: prev.permanentLongitude,
+  //     }));
+  //   } else {
+  //     setUserData((prev) => ({
+  //       ...prev,
+  //       correspondenceAddress: "",
+  //       correspondenceLatitude: "",
+  //       correspondenceLongitude: "",
+  //     }));
+  //   }
+  // };
   const handleAddressCheckbox = (event) => {
     const checked = event.target.checked;
     setSameAddress(checked);
-
+  
     if (checked) {
       setUserData((prev) => ({
         ...prev,
-        correspondenceAddress: prev.permanentAddress,
-        correspondenceLatitude: prev.permanentLatitude,
-        correspondenceLongitude: prev.permanentLongitude,
+        residentialAddressData: {
+          residentialAddress: prev.permanentAddressData.permanentAddress,
+          latitude: prev.permanentAddressData.latitude,
+          longitude: prev.permanentAddressData.longitude,
+        },
       }));
     } else {
       setUserData((prev) => ({
         ...prev,
-        correspondenceAddress: "",
-        correspondenceLatitude: "",
-        correspondenceLongitude: "",
+        residentialAddressData: {
+          residentialAddress: "",
+          latitude: "",
+          longitude: "",
+        },
       }));
     }
   };
+  
+  
 
+  // const handlePermanentLocationSelect = async (lat, lng) => {
+  //   setUserData((prev) => ({
+  //     ...prev,
+  //     permanentLatitude: lat,
+  //     permanentLongitude: lng,
+  //   }));
+
+  //   try {
+  //     const response = await fetch(
+  //       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+  //     );
+  //     const data = await response.json();
+
+  //     setUserData((prev) => ({
+  //       ...prev,
+  //       permanentAddress: data?.display_name || "Address not found",
+  //     }));
+  //   } catch (error) {
+  //     console.error("Error fetching address:", error);
+  //     setUserData((prev) => ({
+  //       ...prev,
+  //       permanentAddress: "Failed to fetch address",
+  //     }));
+  //   }
+
+  //   setIsPermanentMapOpen(false);
+  // };
   const handlePermanentLocationSelect = async (lat, lng) => {
+    // First, update lat/lng
     setUserData((prev) => ({
       ...prev,
-      permanentLatitude: lat,
-      permanentLongitude: lng,
+      permanentAddressData: {
+        ...prev.permanentAddressData,
+        latitude: lat,
+        longitude: lng,
+      },
     }));
-
+  
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
       );
       const data = await response.json();
-
+  
       setUserData((prev) => ({
         ...prev,
-        permanentAddress: data?.display_name || "Address not found",
+        permanentAddressData: {
+          ...prev.permanentAddressData,
+          permanentAddress: data?.display_name || "Address not found",
+        },
       }));
     } catch (error) {
       console.error("Error fetching address:", error);
       setUserData((prev) => ({
         ...prev,
-        permanentAddress: "Failed to fetch address",
+        permanentAddressData: {
+          ...prev.permanentAddressData,
+          permanentAddress: "Failed to fetch address",
+        },
       }));
     }
-
+  
     setIsPermanentMapOpen(false);
   };
+  
+  // const handleCorrespondenceLocationSelect = async (lat, lng) => {
+  //   setUserData((prev) => ({
+  //     ...prev,
+  //     correspondenceLatitude: lat,
+  //     correspondenceLongitude: lng,
+  //   }));
+
+  //   try {
+  //     const response = await fetch(
+  //       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+  //     );
+  //     const data = await response.json();
+
+  //     setUserData((prev) => ({
+  //       ...prev,
+  //       correspondenceAddress: data?.display_name || "Address not found",
+  //     }));
+  //   } catch (error) {
+  //     console.error("Error fetching address:", error);
+  //     setUserData((prev) => ({
+  //       ...prev,
+  //       correspondenceAddress: "Failed to fetch address",
+  //     }));
+  //   }
+
+  //   setIsCorrespondenceMapOpen(false);
+  // };
 
   const handleCorrespondenceLocationSelect = async (lat, lng) => {
+    // First, update lat/lng
     setUserData((prev) => ({
       ...prev,
-      correspondenceLatitude: lat,
-      correspondenceLongitude: lng,
+      residentialAddressData: {
+        ...prev.residentialAddressData,
+        latitude: lat,
+        longitude: lng,
+      },
     }));
-
+  
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
       );
       const data = await response.json();
-
+  
       setUserData((prev) => ({
         ...prev,
-        correspondenceAddress: data?.display_name || "Address not found",
+        residentialAddressData: {
+          ...prev.residentialAddressData,
+          residentialAddress: data?.display_name || "Address not found",
+        },
       }));
     } catch (error) {
       console.error("Error fetching address:", error);
       setUserData((prev) => ({
         ...prev,
-        correspondenceAddress: "Failed to fetch address",
+        residentialAddressData: {
+          ...prev.residentialAddressData,
+          residentialAddress: "Failed to fetch address",
+        },
       }));
     }
-
+  
     setIsCorrespondenceMapOpen(false);
   };
+  
 
   // Add a new empty vehicle with default type and number
   const handleAddVehicle = () => {
@@ -253,16 +393,14 @@ const ProfileForm = () => {
     }
   };
 
-  // Handle delete last vehicle
-  const handleDeleteVehicle = () => {
-    const vehicleKeys = Object.keys(vehicles);
-    if (vehicleKeys.length > 0) {
-      const lastKey = vehicleKeys[vehicleKeys.length - 1];
-      const updatedVehicles = { ...vehicles };
-      delete updatedVehicles[lastKey];
-      setVehicles(updatedVehicles);
-    }
+  const handleDeleteVehicleByKey = (vehicleNumber) => {
+    setVehicles((prev) => {
+      const updated = { ...prev };
+      delete updated[vehicleNumber];
+      return updated;
+    });
   };
+  
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -426,7 +564,7 @@ const ProfileForm = () => {
             Permanent Address
           </Typography>
 
-          <TextField
+          {/* <TextField
             fullWidth
             label="Permanent Address"
             name="permanentAddress"
@@ -456,7 +594,38 @@ const ProfileForm = () => {
             margin="normal"
             required
             disabled
-          />
+          /> */}
+
+<TextField
+  fullWidth
+  label="Permanent Address"
+  name="permanentAddressData.address"
+  value={userData.permanentAddressData.permanentAddress}
+  onChange={handleChange}
+  margin="normal"
+  required
+  multiline
+  rows={3}
+/>
+<TextField
+  fullWidth
+  label="Permanent Address Latitude"
+  name="permanentAddressData.latitude"
+  value={userData.permanentAddressData.latitude}
+  margin="normal"
+  required
+  disabled
+/>
+<TextField
+  fullWidth
+  label="Permanent Address Longitude"
+  name="permanentAddressData.longitude"
+  value={userData.permanentAddressData.longitude}
+  margin="normal"
+  required
+  disabled
+/>
+
 
           <Button
             type="button"
@@ -522,7 +691,7 @@ const ProfileForm = () => {
             label="Same as Permanent Address"
           />
 
-          <TextField
+          {/* <TextField
             fullWidth
             label="Correspondence Address"
             name="correspondenceAddress"
@@ -553,7 +722,39 @@ const ProfileForm = () => {
             margin="normal"
             required
             disabled
-          />
+          /> */}
+<TextField
+  fullWidth
+  label="Correspondence Address"
+  name="residentialAddressData.address"
+  value={userData.residentialAddressData.residentialAddress}
+  onChange={handleChange}
+  margin="normal"
+  required
+  multiline
+  rows={3}
+  disabled={sameAddress}
+/>
+<TextField
+  fullWidth
+  label="Correspondence Address Latitude"
+  name="residentialAddressData.latitude"
+  value={userData.residentialAddressData.latitude}
+  margin="normal"
+  required
+  disabled
+/>
+<TextField
+  fullWidth
+  label="Correspondence Address Longitude"
+  name="residentialAddressData.longitude"
+  value={userData.residentialAddressData.longitude}
+  margin="normal"
+  required
+  disabled
+/>
+
+
           <Button
             type="button"
             variant="outlined"
@@ -645,6 +846,15 @@ const ProfileForm = () => {
                   }
                   required
                 />
+
+                {/* Delete Icon */}
+                <IconButton
+                  aria-label="delete"
+                  color="error"
+                  onClick={() => handleDeleteVehicleByKey(vehicleNumber)}
+                >
+                  <DeleteIcon />
+                </IconButton>
               </Box>
             ))}
 
@@ -657,18 +867,21 @@ const ProfileForm = () => {
             >
               Add Vehicle
             </Button>
-
-            {/* Delete Last Vehicle Button */}
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={handleDeleteVehicle}
-              sx={{ marginBottom: 2, marginLeft: 2 }}
-              disabled={Object.keys(vehicles).length === 0}
-            >
-              Delete Last Vehicle
-            </Button>
           </Box>
+
+<Typography sx={{ marginTop: 2, marginBottom: 1 }}>Wallet Balance</Typography>
+<TextField
+  fullWidth
+  label="Wallet Balance"
+  name="walletBalance"
+  type="number"
+  value={userData.walletBalance}
+  onChange={handleChange}
+  margin="normal"
+  required
+  inputProps={{ min: 0 }}
+/>
+
 
           <Button
             type="submit"

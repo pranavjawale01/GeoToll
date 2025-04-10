@@ -17,6 +17,8 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import GavelIcon from "@mui/icons-material/Gavel";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 
 import { getDatabase, ref, update } from "firebase/database";
 import { useAuth } from "../context/AuthContext"; // Ensure correct context path
@@ -58,6 +60,16 @@ const Navbar = () => {
       icon: <LogoutIcon />,
       onClick: handleLogoutClick,
     },
+    {
+      text: "Penalties",
+      icon: <GavelIcon />, 
+      onClick: () => navigate("/penalties"),
+    },
+    {
+      text: "Toll Charges",
+      icon: <AttachMoneyIcon />,
+      onClick: () => navigate("/toll-history"),
+    },        
   ];
 
   return (
