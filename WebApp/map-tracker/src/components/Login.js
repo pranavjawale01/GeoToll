@@ -11,21 +11,26 @@ import {
   Link,
   Alert,
   Avatar,
-} from "@mui/material"; // Import Material UI components
+} from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [step, setStep] = useState(1); // 1 = login, 2 = otp
+  const [generatedOtp, setGeneratedOtp] = useState("");
+  const [enteredOtp, setEnteredOtp] = useState("");
+  const [tempUser, setTempUser] = useState(null); // to store temp user data
+
   const navigate = useNavigate();
-  const auth = getAuth(); // Firebase authentication instance
-  const database = getDatabase(); // Firebase Realtime Database instance
+  const auth = getAuth();
+  const database = getDatabase();
 
   const handleLogin = async (e) => {
-    e.preventDefault(); //prevents the page reload
+    e.preventDefault();
+    setError("");
 
-    // Email and Password Validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const passwordRegex =
       /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -43,34 +48,57 @@ const Login = () => {
     }
 
     try {
-      // Authenticate the user
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
         password
       );
-      const userId = userCredential.user.uid; // Retrieve the user ID
-
-      // Retrieve user data from Firebase
+      const userId = userCredential.user.uid;
       const userRef = ref(database, "users/" + userId);
       const snapshot = await get(userRef);
 
       if (snapshot.exists()) {
         const storedUser = snapshot.val();
 
-        // Update the user's login status
-        await update(userRef, {
-          ...storedUser,
-          isLoggedIn: true, // Set this to true on login
+        // Generate OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        setGeneratedOtp(otp);
+        setStep(2);
+        setTempUser({ userId, storedUser });
+
+        // Send OTP to user's email
+        await fetch("http://localhost:3000/send-otp", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, otp }),
         });
 
-        // Redirect to the dashboard
-        navigate("/dashboard");
+        alert("OTP sent to your email.");
       } else {
         setError("User data not found.");
       }
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setError("");
+    if (enteredOtp === generatedOtp) {
+      try {
+        const userRef = ref(database, "users/" + tempUser.userId);
+        await update(userRef, {
+          ...tempUser.storedUser,
+          isLoggedIn: true,
+        });
+        navigate("/dashboard");
+      } catch (err) {
+        setError("OTP verified, but login update failed.");
+      }
+    } else {
+      setError("Invalid OTP. Please try again.");
     }
   };
 
@@ -94,7 +122,7 @@ const Login = () => {
           sm={8}
           md={6}
           lg={4}
-          xl={3} // Responsive grid width for different devices
+          xl={3}
           sx={{
             padding: { xs: 2, sm: 3 },
             boxShadow: { xs: 5, sm: 10 },
@@ -121,63 +149,98 @@ const Login = () => {
             </Box>
 
             <Typography variant="h4" gutterBottom align="center">
-              Login
+              {step === 1 ? "Login" : "Verify OTP"}
             </Typography>
 
-            {/* Email Field */}
-            <TextField
-              label="Email"
-              variant="outlined"
-              fullWidth
-              required
-              margin="normal"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            {step === 1 ? (
+              <>
+                <TextField
+                  label="Email"
+                  variant="outlined"
+                  fullWidth
+                  required
+                  margin="normal"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
 
-            {/* Password Field */}
-            <TextField
-              label="Password"
-              variant="outlined"
-              type="password"
-              fullWidth
-              required
-              margin="normal"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+                <TextField
+                  label="Password"
+                  variant="outlined"
+                  type="password"
+                  fullWidth
+                  required
+                  margin="normal"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
 
-            {/* Error Message */}
-            {error && (
-              <Alert severity="error" sx={{ marginBottom: 2 }}>
-                {error}
-              </Alert>
+                {error && (
+                  <Alert severity="error" sx={{ marginBottom: 2 }}>
+                    {error}
+                  </Alert>
+                )}
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  sx={{ marginTop: 2 }}
+                >
+                  Login
+                </Button>
+
+                <Typography
+                  variant="body2"
+                  align="center"
+                  sx={{ marginTop: 2 }}
+                >
+                  Don't have an account?{" "}
+                  <Link href="/signup" underline="hover">
+                    Sign up here
+                  </Link>
+                </Typography>
+                <Typography
+                  variant="body2"
+                  align="center"
+                  sx={{ marginTop: 2 }}
+                >
+                  Forgot your password?{" "}
+                  <Link href="/forgot-password" underline="hover">
+                    Reset it here
+                  </Link>
+                </Typography>
+              </>
+            ) : (
+              <>
+                <TextField
+                  label="Enter OTP"
+                  variant="outlined"
+                  fullWidth
+                  required
+                  margin="normal"
+                  value={enteredOtp}
+                  onChange={(e) => setEnteredOtp(e.target.value)}
+                />
+
+                {error && (
+                  <Alert severity="error" sx={{ marginBottom: 2 }}>
+                    {error}
+                  </Alert>
+                )}
+
+                <Button
+                  onClick={handleVerifyOtp}
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  sx={{ marginTop: 2 }}
+                >
+                  Verify OTP
+                </Button>
+              </>
             )}
-
-            {/* Login Button */}
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              fullWidth
-              sx={{ marginTop: 2 }}
-            >
-              Login
-            </Button>
-
-            {/* Sign Up Link */}
-            <Typography variant="body2" align="center" sx={{ marginTop: 2 }}>
-              Don't have an account?{" "}
-              <Link href="/signup" underline="hover">
-                Sign up here
-              </Link>
-            </Typography>
-            <Typography variant="body2" align="center" sx={{ marginTop: 2 }}>
-              Forgot your password?{" "}
-              <Link href="/forgot-password" underline="hover">
-                Reset it here
-              </Link>
-            </Typography>
           </Box>
         </Grid>
       </Grid>

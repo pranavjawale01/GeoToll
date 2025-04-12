@@ -12,6 +12,8 @@ import ProfileForm from "./components/ProfileForm";
 import ForgotPassword from "./components/ForgotPassword"; // Import the ForgotPassword component
 import { AuthProvider } from "./context/AuthContext"; // Import AuthProvider
 import Navbar from "./components/Navbar";
+import PenaltyTable from "./components/PenaltyHistory";
+import HighwayDistanceTable from "./components/TollCharge";
 
 // Created a wrapper component to conditionally render the Navbar
 const AppLayout = ({ children }) => {
@@ -48,6 +50,8 @@ const App = () => {
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/profile" element={<ProfileForm />} />
+                  <Route path="/penalties" element={<PenaltyTable />} />
+                  <Route path="/toll-history" element={<HighwayDistanceTable />} />
                 </Routes>
               </AppLayout>
             }

@@ -48,7 +48,8 @@ const ForgotPassword = () => {
       setSuccess("Password reset email sent successfully!");
       setLinkSent(true); // Hide send link button after success
     } catch (err) {
-      setError(err.message);
+      console.error("Error sending reset email:", err.message);
+      setError(err.message); // This will give more insight (e.g., user not found)
     }
   };
 
