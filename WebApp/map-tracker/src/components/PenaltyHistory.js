@@ -45,8 +45,16 @@ useEffect(() => {
   
           if (snapshot.exists()) {
             const data = snapshot.val();
-            setDates(Object.keys(data));
-          } else {
+            const sortedDates = Object.keys(data).sort((a, b) => {
+              const [dayA, monthA, yearA] = a.split("-").map(Number);
+              const [dayB, monthB, yearB] = b.split("-").map(Number);
+              const dateA = new Date(yearA, monthA - 1, dayA);
+              const dateB = new Date(yearB, monthB - 1, dayB);
+              return dateA - dateB; // ascending order
+            });
+            setDates(sortedDates);
+          }
+           else {
             setError("No penalties found.");
           }
   
@@ -99,7 +107,6 @@ const handleDateChange = async (event) => {
   };
   
 
-
 const toggleCheckbox = (index) => {
     setSelectedPenalties((prev) => {
       let updated;
@@ -128,51 +135,66 @@ const handlePayPenaltiesClick = () => {
   };
   
 const handleProceedToPay = async () => {
-    if (totalSelectedAmount > walletBalance) {
-      alert("Insufficient wallet balance to proceed with the payment.");
-      return;
+  // Calculate new balance after deduction
+  const newBalance = walletBalance - totalSelectedAmount;
+
+  // Ensure the new balance will not be less than ₹500
+  if (newBalance < 500) {
+    alert("Insufficient balance! You need at least ₹500 in your wallet after the payment.");
+    return;
+  }
+
+  // Check if the total selected amount is greater than the wallet balance
+  if (totalSelectedAmount > walletBalance) {
+    alert("Insufficient wallet balance to proceed with the payment.");
+    return;
+  }
+
+  const updates = [...penaltyDetails]; // local copy to update paid penalties
+  const paidItems = [];
+
+  try {
+    // Mark each selected penalty as paid in Firebase
+    for (const index of selectedPenalties) {
+      const item = penaltyDetails[index];
+      const penaltyRef = ref(database, `penalties/${userId}/${selectedDate}/${item.time}`);
+
+      await set(penaltyRef, {
+        ...item,
+        penalty_paid: true,
+      });
+
+      // Mark it as paid locally
+      updates[index].penalty_paid = true;
+      paidItems.push({ ...updates[index] });
     }
-  
-    const updates = [...penaltyDetails]; // local copy to update paid penalties
-    const paidItems = [];
-  
-    try {
-      // Mark each selected penalty as paid in Firebase
-      for (const index of selectedPenalties) {
-        const item = penaltyDetails[index];
-        const penaltyRef = ref(database, `penalties/${userId}/${selectedDate}/${item.time}`);
-  
-        await set(penaltyRef, {
-          ...item,
-          penalty_paid: true,
-        });
-  
-        // Mark it as paid locally
-        updates[index].penalty_paid = true;
-        paidItems.push({ ...updates[index] });
-      }
-  
-      // 💰 Deduct the totalSelectedAmount from walletBalance
-      const newBalance = walletBalance - totalSelectedAmount;
-      const walletRef = ref(database, `users/${userId}/walletBalance`);
-      await set(walletRef, newBalance);
-  
-      // 🔄 Update local state
-      setWalletBalance(newBalance);
-      const remainingUnpaid = updates.filter((item) => !item.penalty_paid);
-      setPenaltyDetails(remainingUnpaid);
-      setPaidPenalties((prev) => [...prev, ...paidItems]);
-      setSelectedPenalties([]);
-      setShowCheckboxes(false);
-      setTotalSelectedAmount(0);
-  
-      alert("Payment successful! Wallet balance updated.");
-    } catch (err) {
-      console.error("Error during payment:", err);
-      alert("An error occurred while processing the payment. Please try again.");
-    }
-  };
-  
+
+    // Update wallet balance in Firebase with the new balance
+    const walletRef = ref(database, `users/${userId}/walletBalance`);
+    await set(walletRef, newBalance);
+
+    // Update local state with the new wallet balance
+    setWalletBalance(newBalance);
+
+    // Update penalty details to remove paid items
+    const remainingUnpaid = updates.filter((item) => !item.penalty_paid);
+    setPenaltyDetails(remainingUnpaid);
+
+    // Update paid penalties state
+    setPaidPenalties((prev) => [...prev, ...paidItems]);
+
+    // Reset selected penalties and UI
+    setSelectedPenalties([]);
+    setShowCheckboxes(false);
+    setTotalSelectedAmount(0);
+
+    alert("Payment successful! Wallet balance updated.");
+  } catch (err) {
+    console.error("Error during payment:", err);
+    alert("An error occurred while processing the payment. Please try again.");
+  }
+};
+
   
   return (
     <Box
@@ -292,22 +314,34 @@ const handleProceedToPay = async () => {
               </TableContainer>
   
               {showCheckboxes && selectedPenalties.length > 0 && (
-                <Typography variant="h6" sx={{ mt: 2 }}>
-                  Total Amount to Pay: ₹{totalSelectedAmount}
-                </Typography>
+              <Typography variant="h6" sx={{ mt: 2 }}>
+                Total Amount to Pay: ₹{totalSelectedAmount}
+              </Typography>
               )}
-  
-              {showCheckboxes && (
-                <Button
-                  variant="contained"
-                  color="success"
-                  sx={{ mt: 3 }}
-                  onClick={handleProceedToPay}
-                  disabled={selectedPenalties.length === 0}
-                >
-                  Proceed to Pay
-                </Button>
-              )}
+
+            {showCheckboxes && totalSelectedAmount > walletBalance - 500 && (
+            <Typography variant="body2" color="error" sx={{ mt: 1, display: "flex", alignItems: "center", gap: 1 }}>
+              ⚠️ Insufficient wallet balance. You need at least ₹500 in your wallet to proceed.
+            </Typography>
+            )}
+
+
+            {showCheckboxes && (
+              <Button
+              variant="contained"
+              color="success"
+              sx={{ mt: 3 }}
+              onClick={handleProceedToPay}
+              disabled={
+                selectedPenalties.length === 0 ||
+                totalSelectedAmount === 0 ||
+                totalSelectedAmount > walletBalance - 500 
+              }
+            >
+              Proceed to Pay
+            </Button>            
+            )}
+
             </>
           )}
   

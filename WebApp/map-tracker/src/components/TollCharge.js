@@ -1,377 +1,3 @@
-// import React, { useEffect, useState } from "react";
-// import { get, ref, update } from "firebase/database";
-// import { database } from "../firebase";
-// import { useAuth } from "../context/AuthContext";
-// import {
-//   Box,
-//   Typography,
-//   CircularProgress,
-//   FormControl,
-//   InputLabel,
-//   Select,
-//   MenuItem,
-//   Table,
-//   TableBody,
-//   TableCell,
-//   TableContainer,
-//   TableHead,
-//   TableRow,
-//   Paper,
-//   Button,
-//   Alert,
-// } from "@mui/material";
-
-// const HighwayDistanceTable = () => {
-//   const { userId } = useAuth();
-
-//   const [vehicleNumbers, setVehicleNumbers] = useState([]);
-//   const [selectedVehicle, setSelectedVehicle] = useState("");
-//   const [dates, setDates] = useState([]);
-//   const [selectedDate, setSelectedDate] = useState("");
-//   const [distance, setDistance] = useState(null);
-//   const [price, setPrice] = useState(null);
-//   const [walletBalance, setWalletBalance] = useState(null);
-//   const [paymentStatus, setPaymentStatus] = useState(""); // Success | Error
-//   const [loading, setLoading] = useState(false);
-//   const [paidRecords, setPaidRecords] = useState([]);//10-04-25
-
-//   // Fetch vehicle numbers
-//   useEffect(() => {
-//     if (!userId) return;
-
-//     const fetchVehicles = async () => {
-//       setLoading(true);
-//       try {
-//         const vehiclesRef = ref(database, `location/${userId}/coordinates`);
-//         const snapshot = await get(vehiclesRef);
-//         if (snapshot.exists()) {
-//           const data = snapshot.val();
-//           const vehicles = Object.keys(data).filter((key) => key !== "0");
-//           setVehicleNumbers(vehicles);
-//         } else {
-//           setVehicleNumbers([]);
-//         }
-//       } catch (err) {
-//         console.error("Error fetching vehicle numbers:", err);
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     fetchVehicles();
-//   }, [userId]);
-
-
-// useEffect(() => {
-//     if (!selectedVehicle) return;
-  
-//     const fetchDates = async () => {
-//       setLoading(true);
-//       try {
-//         const datesRef = ref(database, `location/${userId}/coordinates/${selectedVehicle}`);
-//         const snapshot = await get(datesRef);
-//         if (snapshot.exists()) {
-//           const allDates = snapshot.val();
-  
-//           const filteredDates = [];
-//           const paid = [];
-  
-//         Object.keys(allDates).forEach((date) => {
-//             const entry = allDates[date];
-//             if (entry.tollPayed) {
-//               const paidDistance = entry.paidDistance ?? "0.00";
-//               const paidAmount = entry.paidAmount ?? "0.00";
-//               paid.push({ date, distance: paidDistance, price: paidAmount });
-//             } else {
-//               filteredDates.push(date);
-//             }
-//           });
-          
-  
-//           setDates(filteredDates);
-//           setPaidRecords(paid);
-//         } else {
-//           setDates([]);
-//           setPaidRecords([]);
-//         }
-//       } catch (err) {
-//         console.error("Error fetching dates:", err);
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-  
-//     fetchDates();
-//   }, [selectedVehicle, userId]);
-  
-
-//   // Fetch highway distance and wallet balance
-//   useEffect(() => {
-//     if (!selectedVehicle || !selectedDate) return;
-
-//     const fetchDistanceAndBalance = async () => {
-//       setLoading(true);
-//       try {
-//         // Fetch Distance
-//         const distRef = ref(
-//           database,
-//           `location/${userId}/coordinates/${selectedVehicle}/${selectedDate}/todayTotalHighwayDistance`
-//         );
-//         const snapshot = await get(distRef);
-//         if (snapshot.exists()) {
-//           const meters = snapshot.val();
-//           const kilometers = (meters / 1000).toFixed(2);
-//           const calculatedPrice = (kilometers * 1).toFixed(2); // ₹1 per km
-//           setDistance(kilometers);
-//           setPrice(calculatedPrice);
-//         } else {
-//           setDistance("Not available");
-//           setPrice("N/A");
-//         }
-
-//         // Fetch Wallet Balance
-//         const walletRef = ref(database, `users/${userId}/walletBalance`);
-//         const walletSnap = await get(walletRef);
-//         if (walletSnap.exists()) {
-//           setWalletBalance(walletSnap.val());
-//         } else {
-//           setWalletBalance(0);
-//         }
-//       } catch (err) {
-//         console.error("Error fetching data:", err);
-//         setDistance("Error");
-//         setPrice("Error");
-//         setWalletBalance("Error");
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     fetchDistanceAndBalance();
-//   }, [selectedVehicle, selectedDate, userId]);
-
-
-// const handlePayToll = async () => {
-//     if (walletBalance < price) {
-//       setPaymentStatus("Insufficient balance");
-//       return;
-//     }
-  
-//     try {
-//       const newBalance = walletBalance - price;
-  
-//       // Update wallet balance
-//       const walletRef = ref(database, `users/${userId}`);
-//       await update(walletRef, { walletBalance: newBalance });
-  
-//       // Save the paidDistance and paidAmount before resetting
-//       const distanceRef = ref(
-//         database,
-//         `location/${userId}/coordinates/${selectedVehicle}/${selectedDate}`
-//       );
-//       await update(distanceRef, {
-//         paidDistance: distance,
-//         paidAmount: price,
-//         todayTotalHighwayDistance: 0,
-//         tollPayed: true,
-//       });
-  
-//       setWalletBalance(newBalance);
-//       setDistance("0.00");
-//       setPrice("0.00");
-//       setPaymentStatus("Payment successful");
-  
-//       // Re-fetch updated date records and paid history
-//       const updatedSnapshot = await get(
-//         ref(database, `location/${userId}/coordinates/${selectedVehicle}`)
-//       );
-//       if (updatedSnapshot.exists()) {
-//         const allDates = updatedSnapshot.val();
-//         const filteredDates = [];
-//         const paid = [];
-  
-//         Object.keys(allDates).forEach((date) => {
-//             const entry = allDates[date];
-//             if (entry.tollPayed) {
-//               paid.push({
-//                 date,
-//                 distance: entry.paidDistance ?? "0.00",
-//                 price: entry.paidAmount ?? "0.00",
-//               });
-//             } else {
-//               filteredDates.push(date);
-//             }
-//           });
-          
-  
-//         setDates(filteredDates);
-//         setPaidRecords(paid);
-//       }
-  
-//       // Clear selected date (optional)
-//       setSelectedDate("");
-//     } catch (err) {
-//       console.error("Payment failed:", err);
-//       setPaymentStatus("Payment failed");
-//     }
-//   };  
-  
-  
-
-//   return (
-//     <Box sx={{ maxWidth: 700, mx: "auto", pt: 10, px: 2, textAlign: "center" }}>
-//       <Typography variant="h5" fontWeight="bold" gutterBottom>
-//         Highway Distance Records
-//       </Typography>
-
-//       {loading ? (
-//         <Box display="flex" justifyContent="center" mt={4}>
-//           <CircularProgress size={40} />
-//         </Box>
-//       ) : (
-//         <>
-//           <FormControl fullWidth sx={{ mt: 3 }}>
-//             <InputLabel>Select Vehicle</InputLabel>
-//             <Select
-//               value={selectedVehicle}
-//               label="Select Vehicle"
-//               onChange={(e) => {
-//                 setSelectedVehicle(e.target.value);
-//                 setSelectedDate("");
-//                 setDistance(null);
-//                 setPrice(null);
-//                 setWalletBalance(null);
-//                 setPaymentStatus("");
-//               }}
-//             >
-//               {vehicleNumbers.map((veh, idx) => (
-//                 <MenuItem key={idx} value={veh}>
-//                   {veh}
-//                 </MenuItem>
-//               ))}
-//             </Select>
-//           </FormControl>
-
-//           {selectedVehicle && (
-//             <FormControl fullWidth sx={{ mt: 3 }}>
-//               <InputLabel>Select Date</InputLabel>
-//               <Select
-//                 value={selectedDate}
-//                 label="Select Date"
-//                 onChange={(e) => {
-//                   setSelectedDate(e.target.value);
-//                   setPaymentStatus("");
-//                 }}
-//               >
-//                 {dates.map((date, idx) => (
-//                   <MenuItem key={idx} value={date}>
-//                     {date}
-//                   </MenuItem>
-//                 ))}
-//               </Select>
-//             </FormControl>
-//           )}
-
-//           {distance !== null && (
-//             <>
-//               <Box sx={{ mt: 4 }}>
-//                 <Typography variant="subtitle1">
-//                   <strong>💰 Wallet Balance:</strong> ₹{Number(walletBalance).toFixed(2)}
-//                 </Typography>
-//               </Box>
-
-//               <TableContainer component={Paper} sx={{ mt: 2 }}>
-//                 <Table>
-//                   <TableHead sx={{ backgroundColor: "#e3f2fd" }}>
-//                     <TableRow>
-//                       <TableCell><strong>Vehicle Number</strong></TableCell>
-//                       <TableCell><strong>Date</strong></TableCell>
-//                       <TableCell><strong>Highway Distance (km)</strong></TableCell>
-//                       <TableCell><strong>Payable Price (₹)</strong></TableCell>
-//                     </TableRow>
-//                   </TableHead>
-//                   <TableBody>
-//                     <TableRow>
-//                       <TableCell>{selectedVehicle}</TableCell>
-//                       <TableCell>{selectedDate}</TableCell>
-//                       <TableCell>{distance}</TableCell>
-//                       <TableCell>{price}</TableCell>
-//                     </TableRow>
-//                   </TableBody>
-//                 </Table>
-//               </TableContainer>
-
-//               <Box sx={{ mt: 3 }}>
-//                 <Button
-//                   variant="contained"
-//                   color="primary"
-//                   onClick={handlePayToll}
-//                   disabled={
-//                     walletBalance < price ||
-//                     price === "N/A" ||
-//                     price === "Error" ||
-//                     distance === "0.00"
-//                   }
-//                 >
-//                   Pay Toll
-//                 </Button>
-
-//                 {paymentStatus && (
-//                   <Box sx={{ mt: 2 }}>
-//                     <Alert severity={
-//                       paymentStatus === "Payment successful"
-//                         ? "success"
-//                         : paymentStatus === "Insufficient balance"
-//                         ? "warning"
-//                         : "error"
-//                     }>
-//                       {paymentStatus}
-//                     </Alert>
-//                   </Box>
-//                 )}
-//               </Box>
-//             </>
-//           )}
-
-//           {/* To show immediately after vehicle is selected */}
-//           {selectedVehicle && paidRecords.length > 0 && (
-//             <Box sx={{ mt: 6 }}>
-//               <Typography variant="h6" gutterBottom>
-//                 Toll Payment History
-//               </Typography>
-//               <TableContainer component={Paper}>
-//                 <Table>
-//                   <TableHead sx={{ backgroundColor: "#e8f5e9" }}>
-//                     <TableRow>
-//                       <TableCell><strong>Date</strong></TableCell>
-//                       <TableCell><strong>Distance (km)</strong></TableCell>
-//                       <TableCell><strong>Amount Paid (₹)</strong></TableCell>
-//                     </TableRow>
-//                   </TableHead>
-//                   <TableBody>
-//                     {paidRecords.map((entry, idx) => (
-//                       <TableRow key={idx}>
-//                         <TableCell>{entry.date}</TableCell>
-//                         <TableCell>{entry.distance}</TableCell>
-//                         <TableCell>{entry.price}</TableCell>
-//                       </TableRow>
-//                     ))}
-//                   </TableBody>
-//                 </Table>
-//               </TableContainer>
-//             </Box>
-//           )}
-//         </>
-//       )}
-//     </Box>
-//   );
-// };
-
-// export default HighwayDistanceTable;
-
-
-
-
 import React, { useEffect, useState } from "react";
 import { get, ref, update } from "firebase/database";
 import { database } from "../firebase";
@@ -464,8 +90,15 @@ const HighwayDistanceTable = () => {
           }
         }
 
-        setUnpaidRecords(unpaid);
-        setPaidRecords(paid);
+        const sortByDateAsc = (arr) =>
+          arr.sort((a, b) => {
+            const [d1, m1, y1] = a.date.split("-").map(Number);
+            const [d2, m2, y2] = b.date.split("-").map(Number);
+            return new Date(y1, m1 - 1, d1) - new Date(y2, m2 - 1, d2);
+          });
+        
+        setUnpaidRecords(sortByDateAsc(unpaid));
+        setPaidRecords(sortByDateAsc(paid));        
         setSelectedDates([]);
         setShowCheckboxes(false);
         setPaymentStatus("");
@@ -494,10 +127,12 @@ const HighwayDistanceTable = () => {
     );
   };
 
+  
   const totalAmount = selectedDates.reduce((sum, date) => {
     const record = unpaidRecords.find((r) => r.date === date);
     return sum + (record ? parseFloat(record.price) : 0);
-  }, 0).toFixed(2);
+  }, 0);
+  
 
   const handleProceedToPay = async () => {
     if (walletBalance < totalAmount) {
@@ -640,26 +275,33 @@ const HighwayDistanceTable = () => {
                 </Button>
               ) : (
                 <>
+                  
                   <Typography sx={{ mt: 3 }}>
-                    <strong>Total Amount:</strong> ₹{totalAmount}
+                  <strong>Total Amount:</strong> ₹{totalAmount.toFixed(2)}
                   </Typography>
-  
-                  {walletBalance < totalAmount && (
-                    <Alert severity="warning" sx={{ mt: 2 }}>
-                      Insufficient wallet balance. Please add funds to proceed.
-                    </Alert>
+
+                  {walletBalance < Number(totalAmount.toFixed(2)) && (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    Insufficient wallet balance. Please add funds to proceed.
+                  </Alert>
                   )}
+
   
                   <Button
                     variant="contained"
                     color="success"
                     sx={{ mt: 2 }}
                     onClick={handleProceedToPay}
+                    // disabled={
+                    //   selectedDates.length === 0 ||
+                    //   totalAmount <= 0 ||
+                    //   walletBalance < totalAmount
+                    // }
                     disabled={
                       selectedDates.length === 0 ||
                       totalAmount <= 0 ||
-                      walletBalance < totalAmount
-                    }
+                      walletBalance < Number(totalAmount.toFixed(2))
+                    }                    
                   >
                     Proceed to Pay
                   </Button>

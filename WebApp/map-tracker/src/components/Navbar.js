@@ -56,11 +56,6 @@ const Navbar = () => {
       onClick: () => navigate("/dashboard"),
     },
     {
-      text: "Logout",
-      icon: <LogoutIcon />,
-      onClick: handleLogoutClick,
-    },
-    {
       text: "Penalties",
       icon: <GavelIcon />, 
       onClick: () => navigate("/penalties"),
@@ -69,6 +64,11 @@ const Navbar = () => {
       text: "Toll Charges",
       icon: <AttachMoneyIcon />,
       onClick: () => navigate("/toll-history"),
+    },
+    {
+      text: "Logout",
+      icon: <LogoutIcon />,
+      onClick: handleLogoutClick,
     },        
   ];
 
