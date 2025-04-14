@@ -299,14 +299,14 @@ class MainActivity : ComponentActivity() {
             val speed = SpeedCalculator.calculateSpeed(previous, location)
             speedTextView.text = String.format("Speed: %.2f km/h", speed)
 
-            var speedLimit: Int = 80 // Initialize with a default value
+            var speedLimit = 80 // Initialize with a default value
 
             HighwayCheckerOSM.speedProviderForRoads(HighwayCheckerOSM.Coordinates(location.latitude, location.longitude)) { speedTemp ->
                 speedLimit = speedTemp
                 println("Speed limit updated: $speedLimit km/h")
             }
 
-            if (speed > speedLimit) {
+            if (speed > 0) {// speedLimit) {
                 if (currentVehicleId != null) {
                     FirebaseHelper.saveOverSpeedPenalty(user!!.uid, location, speed, speedLimit, currentVehicleId!!)
                 } else {
