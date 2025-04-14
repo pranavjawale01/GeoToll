@@ -12,6 +12,8 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+
+
 // Firebase Initialization using environment variables
 admin.initializeApp({
   credential: admin.credential.cert({
@@ -41,31 +43,207 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// HTML Email Template Generator
+function generateEmailTemplate({ title, preheader, greeting, content, actionButton, footerNote }) {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <style>
+    /* Base Styles */
+    body {
+      font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+      color: #333333;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .preheader {
+      display: none;
+      font-size: 1px;
+      color: transparent;
+      line-height: 1px;
+      max-height: 0;
+      max-width: 0;
+      opacity: 0;
+      overflow: hidden;
+    }
+    .header {
+      background-color: #0056b3;
+      padding: 30px 20px;
+      text-align: center;
+    }
+    .logo {
+      color: #ffffff;
+      font-size: 24px;
+      font-weight: bold;
+      text-decoration: none;
+    }
+    .content {
+      padding: 30px 20px;
+    }
+    .greeting {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    .divider {
+      height: 4px;
+      background: linear-gradient(to right, #0056b3, #00a0e9);
+      margin: 20px 0;
+      border: none;
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 24px;
+      background-color: #0056b3;
+      color: #ffffff !important;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: bold;
+      margin: 15px 0;
+    }
+    .card {
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      border-left: 4px solid #0056b3;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+    }
+    .detail-label {
+      font-weight: bold;
+      width: 150px;
+      color: #555555;
+    }
+    .detail-value {
+      flex: 1;
+    }
+    .highlight {
+      color: #0056b3;
+      font-weight: bold;
+    }
+    .alert {
+      color: #d9534f;
+      font-weight: bold;
+    }
+    .footer {
+      padding: 20px;
+      text-align: center;
+      background-color: #f0f0f0;
+      font-size: 12px;
+      color: #666666;
+    }
+    .otp-display {
+      font-size: 32px;
+      letter-spacing: 5px;
+      padding: 15px;
+      background-color: #f0f8ff;
+      border: 1px dashed #0056b3;
+      border-radius: 4px;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .list {
+      padding-left: 20px;
+    }
+    .list li {
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <!-- Preheader Text -->
+    <div class="preheader">${preheader || title}</div>
+    
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">Toll Management System</div>
+    </div>
+    
+    <!-- Content -->
+    <div class="content">
+      <div class="greeting">${greeting}</div>
+      
+      <hr class="divider">
+      
+      ${content}
+      
+      ${actionButton ? `<p style="text-align: center;"><a href="${actionButton.url}" class="button">${actionButton.text}</a></p>` : ''}
+      
+      <p>If you have any questions, please contact our support team.</p>
+      
+      <p>Best regards,<br><strong>Toll Management System Team</strong></p>
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} Toll Management System. All rights reserved.</p>
+      ${footerNote ? `<p>${footerNote}</p>` : ''}
+      <p>This is an automated message. Please do not reply directly to this email.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+}
+
+
 // 📧 Login Notification
 async function sendLoginEmail(email, name) {
   const mailOptions = {
-    from: process.env.EMAIL,
+    from: `Toll Management System <${process.env.EMAIL}>`,
     to: email,
-    subject: "🔐 Login Notification - Toll System",
-    text: `
-Hello ${name},
-
-You have successfully logged in to the Toll Management System.
-
-If this wasn't you, please report immediately.
-
-🕒 Time: ${new Date().toLocaleString()}
-
-Regards,
-Toll Management System Team
-    `,
+    subject: "🔐 Successful Login to Your Account",
+    html: generateEmailTemplate({
+      title: "Login Notification",
+      preheader: "We noticed a login to your account",
+      greeting: `Hello ${name},`,
+      content: `
+        <p>We detected a successful login to your Toll Management System account.</p>
+        
+        <div class="card">
+          <div class="detail-row">
+            <div class="detail-label">Login Status:</div>
+            <div class="detail-value highlight">Successful</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Date & Time:</div>
+            <div class="detail-value">${new Date().toLocaleString()}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Device:</div>
+            <div class="detail-value">Web Browser</div>
+          </div>
+        </div>
+        
+        <p>If this wasn't you, please secure your account immediately by:</p>
+        <ul class="list">
+          <li>Changing your password</li>
+          <li>Contacting our support team</li>
+        </ul>
+      `,
+      footerNote: "For security reasons, we recommend reviewing your account activity regularly."
+    })
   };
 
   return new Promise((resolve, reject) => {
     transporter.sendMail(mailOptions, (err, info) => {
       if (err) {
         console.error("❌ Login email error:", err);
-        reject(err); // 💥 so we don’t mark sent if it fails
+        reject(err);
       } else {
         console.log("✅ Login email sent to:", email);
         resolve(info);
@@ -73,29 +251,49 @@ Toll Management System Team
     });
   });
 }
+
 // 📧 Penalty Notification
 async function sendPenaltyEmail(email, data, penaltyRef, name) {
   const mailOptions = {
-    from: process.env.EMAIL,
+    from: `Toll Management System <${process.env.EMAIL}>`,
     to: email,
     subject: "🚨 Overspeeding Penalty Alert",
-    text: `
-Hello ${name},
+    html: generateEmailTemplate({
+      title: "Overspeeding Penalty",
+      preheader: `Penalty charge of ₹${data.penalty_charge || "0"} applied`,
+      greeting: `Dear ${name},`,
+      content: `
+        <p>Your vehicle has been recorded exceeding the speed limit in a toll zone.</p>
+        
+        <div class="card">
+          <div class="detail-row">
+            <div class="detail-label">Location:</div>
+            <div class="detail-value">${data.lat || "N/A"}, ${data.lon || "N/A"}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Recorded Speed:</div>
+            <div class="detail-value alert">${data.speed || "N/A"} km/h</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Speed Limit:</div>
+            <div class="detail-value">${data.speed_limit || "N/A"} km/h</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Penalty Amount:</div>
+            <div class="detail-value alert">₹${data.penalty_charge || "0"}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Timestamp:</div>
+            <div class="detail-value">${data.timestamp || "Unknown"}</div>
+          </div>
+        </div>
+        
+        <p>This penalty will be added to your next toll payment invoice.</p>
+        <p>Please ensure you adhere to posted speed limits for your safety and the safety of others.</p>
+      `,
 
-Your vehicle has been recorded overspeeding.
-
-Details:
-📍 Location: (${data.lat || "N/A"}, ${data.lon || "N/A"})
-🚗 Speed: ${data.speed || "N/A"} km/h
-📏 Limit: ${data.speed_limit || "N/A"} km/h
-💸 Charge: ₹${data.penalty_charge || "Not specified"}
-🕒 Time: ${data.timestamp || "Unknown"}
-
-Please ensure safe driving in the future.
-
-Regards,
-Toll Management System Team
-    `,
+      footerNote: "You may contest this penalty within 7 days of issuance."
+    })
   };
 
   transporter.sendMail(mailOptions, async (err, info) => {
@@ -111,24 +309,45 @@ Toll Management System Team
 // 📧 GPS Failure Notification
 async function sendGPSFailureEmail(email, name, data, date, time, gpsRef) {
   const mailOptions = {
-    from: process.env.EMAIL,
+    from: `Toll Management System <${process.env.EMAIL}>`,
     to: email,
     subject: "📍 GPS Failure Alert",
-    text: `
-Hello ${name},
-
-We noticed a GPS failure on your device.
-
-📱 Device Model: ${data.deviceModel || "N/A"}
-📄 App Version: ${data.appVersion || "N/A"}
-⛔ Status: ${data.gpsStatusMessage || "GPS Failed to Operate"}
-🕒 Time: ${date} ${time}
-
-Please check your device's GPS settings and retry.
-
-Regards,
-Toll Management System Team
-    `,
+    html: generateEmailTemplate({
+      title: "GPS Functionality Issue",
+      preheader: "GPS failure detected on your device",
+      greeting: `Dear ${name},`,
+      content: `
+        <p>Our system detected an issue with your device's GPS functionality.</p>
+        
+        <div class="card">
+          <div class="detail-row">
+            <div class="detail-label">Device Model:</div>
+            <div class="detail-value">${data.deviceModel || "N/A"}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">App Version:</div>
+            <div class="detail-value">${data.appVersion || "N/A"}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Status:</div>
+            <div class="detail-value alert">${data.gpsStatusMessage || "GPS Not Functioning"}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Date & Time:</div>
+            <div class="detail-value">${date} ${time}</div>
+          </div>
+        </div>
+        
+        <p>This may affect toll calculations and location services. Please:</p>
+        <ul class="list">
+          <li>Ensure location services are enabled</li>
+          <li>Check your device's GPS settings</li>
+          <li>Restart the application</li>
+          <li>Move to an area with better reception if indoors</li>
+        </ul>
+      `,
+      footerNote: "Service may be affected until GPS functionality is restored."
+    })
   };
 
   transporter.sendMail(mailOptions, async (err, info) => {
@@ -185,6 +404,8 @@ usersRef.on("child_changed", async (userSnap) => {
   const currentStatus = userData.isLoggedIn;
   const previousStatus = previousLoginStatus[userId];
 
+  console.log(`User ${userId} login status changed: ${currentStatus}`);
+
   try {
     // 🟢 Detect only true login event
     if (currentStatus === true && previousStatus === false) {
@@ -210,6 +431,7 @@ const gpsFailedRef = db.ref("/GPSFailed");
 
 gpsFailedRef.on("child_added", (userSnap) => {
   const userId = userSnap.key;
+  console.log(`New GPS failure for user ${userId}`);
 
   userSnap.forEach((dateSnap) => {
     const date = dateSnap.key;
@@ -217,6 +439,8 @@ gpsFailedRef.on("child_added", (userSnap) => {
     dateSnap.ref.on("child_added", async (timeSnap) => {
       const time = timeSnap.key;
       const data = timeSnap.val();
+
+      console.log(`GPS Failure Data for ${userId} at ${date} ${time}:`, data);
 
       if (data.emailSent) return;
 
@@ -246,25 +470,23 @@ app.post("/send-otp", async (req, res) => {
   }
 
   const mailOptions = {
-    from: process.env.EMAIL,
+    from:`Toll Management System <${process.env.EMAIL}>`,
     to: email,
     subject: "🔐 Your OTP for Toll System Login",
-    text: `
-Hello,
-
-Your One-Time Password (OTP) for logging into the Toll Management System is:
-
-👉 OTP: ${otp}
-
-Please do not share this OTP with anyone.
-
-🕒 Time: ${new Date().toLocaleString()}
-
-If this wasn't you, please ignore this email.
-
-Regards,
-Toll Management System Team
-    `,
+    html: generateEmailTemplate({
+      title: "One-Time Password",
+      preheader: `Your OTP is ${otp}`,
+      greeting: "Hello,",
+      content: `
+        <p>Use the following OTP to authenticate your Toll Management System login:</p>
+        
+        <div class="otp-display">${otp}</div>
+        
+        <p>This OTP is valid for 5 minutes. Do not share it with anyone.</p>
+        <p>If you didn't request this OTP, please secure your account immediately.</p>
+      `,
+      footerNote: "For security reasons, we never ask for your password or OTP via phone or email."
+    })
   };
 
   try {
