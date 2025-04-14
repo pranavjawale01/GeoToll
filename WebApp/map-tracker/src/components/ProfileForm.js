@@ -29,12 +29,6 @@ const ProfileForm = () => {
     license: "",
     dob: "",
     gender: "",
-    // permanentAddress: "",
-    // permanentLatitude: 0,
-    // permanentLongitude: 0,
-    // correspondenceAddress: "",
-    // correspondenceLatitude: 0,
-    // correspondenceLongitude: 0,
     lightMotorVehicles: "",
     lightCommercialVehicles: "",
     heavyVehicles: "",
@@ -61,6 +55,7 @@ const ProfileForm = () => {
   const navigate = useNavigate(); // Initialize useNavigate
   const [isPermanentMapOpen, setIsPermanentMapOpen] = useState(false);
   const [isCorrespondenceMapOpen, setIsCorrespondenceMapOpen] = useState(false);
+  const [walletError, setWalletError] = useState("");//12/04/25
 
   useEffect(() => {
     const fetchData = async () => {
@@ -78,12 +73,6 @@ const ProfileForm = () => {
               license: userProfile.license || "",
               dob: userProfile.dob || "",
               gender: userProfile.gender || "",
-              // permanentAddress: userProfile.permanentAddress || "",
-              // permanentLatitude: userProfile.permanentLatitude || "",
-              // permanentLongitude: userProfile.permanentLongitude || "",
-              // correspondenceAddress: userProfile.correspondenceAddress || "",
-              // correspondenceLatitude: userProfile.correspondenceLatitude || "",
-              // correspondenceLongitude:userProfile.correspondenceLongitude || "",
               age: calculateAge(userProfile.dob) || "",
               walletBalance: userProfile.walletBalance || "",
               permanentAddressData: {
@@ -129,41 +118,107 @@ const ProfileForm = () => {
   };
 
   // Handle input changes in the form fields
+  // const handleChange = (e) => {
+  //   const { name, value } = e.target;
+
+  //   // Allow only zero or positive values for specific fields
+  //   const fieldsToValidate = [
+  //     "lightMotorVehicles",
+  //     "lightCommercialVehicles",
+  //     "heavyVehicles",
+  //   ];
+
+  //   if (fieldsToValidate.includes(name)) {
+  //     // Ensure the value is zero or positive
+  //     const validatedValue = Math.max(0, Number(value) || 0);
+  //     setUserData({ ...userData, [name]: validatedValue });
+  //     return; // Exit early since validation is complete
+  //   }
+
+  //   // If the user selects a date of birth (dob), calculate the age
+  //   if (name === "dob") {
+  //     const calculatedAge = calculateAge(value);
+  //     setUserData({ ...userData, dob: value, age: calculatedAge });
+  //   } else {
+  //     setUserData({ ...userData, [name]: value });
+  //   }
+
+  //   // If checkbox is checked, copy permanent address to correspondence address
+  //   if (sameAddress && name === "permanentAddress") {
+  //     setUserData({
+  //       ...userData,
+  //       permanentAddress: value,
+  //       correspondenceAddress: value,
+  //     });
+  //   }
+
+  //   //06-04-25
+  //   if (name.startsWith("permanentAddressData.") || name.startsWith("residentialAddressData.")) {
+  //     const [parent, child] = name.split(".");
+  //     setUserData((prevState) => ({
+  //       ...prevState,
+  //       [parent]: {
+  //         ...prevState[parent],
+  //         [child]: value,
+  //       },
+  //     }));
+  //   } else {
+  //     setUserData((prevState) => ({
+  //       ...prevState,
+  //       [name]: value,
+  //     }));
+  //   }
+  // };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-
+  
     // Allow only zero or positive values for specific fields
     const fieldsToValidate = [
       "lightMotorVehicles",
       "lightCommercialVehicles",
       "heavyVehicles",
     ];
-
+  
     if (fieldsToValidate.includes(name)) {
-      // Ensure the value is zero or positive
       const validatedValue = Math.max(0, Number(value) || 0);
       setUserData({ ...userData, [name]: validatedValue });
-      return; // Exit early since validation is complete
+      return;
     }
-
-    // If the user selects a date of birth (dob), calculate the age
+  
+    // Wallet balance validation
+    if (name === "walletBalance") {
+      const numericValue = parseFloat(value);
+      if (numericValue < 500) {
+        setWalletError("Minimum wallet balance should be ₹500");
+      } else {
+        setWalletError("");
+      }
+      setUserData((prevState) => ({
+        ...prevState,
+        [name]: numericValue,
+      }));
+      return;
+    }
+  
+    // Calculate age from DOB
     if (name === "dob") {
       const calculatedAge = calculateAge(value);
       setUserData({ ...userData, dob: value, age: calculatedAge });
-    } else {
-      setUserData({ ...userData, [name]: value });
+      return;
     }
-
-    // If checkbox is checked, copy permanent address to correspondence address
+  
+    // Copy permanent to correspondence address if checkbox is checked
     if (sameAddress && name === "permanentAddress") {
       setUserData({
         ...userData,
         permanentAddress: value,
         correspondenceAddress: value,
       });
+      return;
     }
-
-    //06-04-25
+  
+    // Handle nested address fields (permanent/residential)
     if (name.startsWith("permanentAddressData.") || name.startsWith("residentialAddressData.")) {
       const [parent, child] = name.split(".");
       setUserData((prevState) => ({
@@ -173,34 +228,17 @@ const ProfileForm = () => {
           [child]: value,
         },
       }));
-    } else {
-      setUserData((prevState) => ({
-        ...prevState,
-        [name]: value,
-      }));
+      return;
     }
+  
+    // Default update for all other fields
+    setUserData((prevState) => ({
+      ...prevState,
+      [name]: value,
+    }));
   };
+  
 
-  // const handleAddressCheckbox = (event) => {
-  //   const checked = event.target.checked;
-  //   setSameAddress(checked);
-
-  //   if (checked) {
-  //     setUserData((prev) => ({
-  //       ...prev,
-  //       correspondenceAddress: prev.permanentAddress,
-  //       correspondenceLatitude: prev.permanentLatitude,
-  //       correspondenceLongitude: prev.permanentLongitude,
-  //     }));
-  //   } else {
-  //     setUserData((prev) => ({
-  //       ...prev,
-  //       correspondenceAddress: "",
-  //       correspondenceLatitude: "",
-  //       correspondenceLongitude: "",
-  //     }));
-  //   }
-  // };
   const handleAddressCheckbox = (event) => {
     const checked = event.target.checked;
     setSameAddress(checked);
@@ -227,34 +265,6 @@ const ProfileForm = () => {
   };
   
   
-
-  // const handlePermanentLocationSelect = async (lat, lng) => {
-  //   setUserData((prev) => ({
-  //     ...prev,
-  //     permanentLatitude: lat,
-  //     permanentLongitude: lng,
-  //   }));
-
-  //   try {
-  //     const response = await fetch(
-  //       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
-  //     );
-  //     const data = await response.json();
-
-  //     setUserData((prev) => ({
-  //       ...prev,
-  //       permanentAddress: data?.display_name || "Address not found",
-  //     }));
-  //   } catch (error) {
-  //     console.error("Error fetching address:", error);
-  //     setUserData((prev) => ({
-  //       ...prev,
-  //       permanentAddress: "Failed to fetch address",
-  //     }));
-  //   }
-
-  //   setIsPermanentMapOpen(false);
-  // };
   const handlePermanentLocationSelect = async (lat, lng) => {
     // First, update lat/lng
     setUserData((prev) => ({
@@ -293,34 +303,6 @@ const ProfileForm = () => {
     setIsPermanentMapOpen(false);
   };
   
-  // const handleCorrespondenceLocationSelect = async (lat, lng) => {
-  //   setUserData((prev) => ({
-  //     ...prev,
-  //     correspondenceLatitude: lat,
-  //     correspondenceLongitude: lng,
-  //   }));
-
-  //   try {
-  //     const response = await fetch(
-  //       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
-  //     );
-  //     const data = await response.json();
-
-  //     setUserData((prev) => ({
-  //       ...prev,
-  //       correspondenceAddress: data?.display_name || "Address not found",
-  //     }));
-  //   } catch (error) {
-  //     console.error("Error fetching address:", error);
-  //     setUserData((prev) => ({
-  //       ...prev,
-  //       correspondenceAddress: "Failed to fetch address",
-  //     }));
-  //   }
-
-  //   setIsCorrespondenceMapOpen(false);
-  // };
-
   const handleCorrespondenceLocationSelect = async (lat, lng) => {
     // First, update lat/lng
     setUserData((prev) => ({
@@ -564,67 +546,35 @@ const ProfileForm = () => {
             Permanent Address
           </Typography>
 
-          {/* <TextField
+          <TextField
             fullWidth
             label="Permanent Address"
-            name="permanentAddress"
-            value={userData.permanentAddress}
+            name="permanentAddressData.address"
+            value={userData.permanentAddressData.permanentAddress}
             onChange={handleChange}
             margin="normal"
             required
             multiline
             rows={3}
           />
-
           <TextField
             fullWidth
             label="Permanent Address Latitude"
-            name="permanentLatitude"
-            value={userData.permanentLatitude}
+            name="permanentAddressData.latitude"
+            value={userData.permanentAddressData.latitude}
             margin="normal"
             required
             disabled
           />
-
           <TextField
             fullWidth
             label="Permanent Address Longitude"
-            name="permanentLongitude"
-            value={userData.permanentLongitude}
+            name="permanentAddressData.longitude"
+            value={userData.permanentAddressData.longitude}
             margin="normal"
             required
             disabled
-          /> */}
-
-<TextField
-  fullWidth
-  label="Permanent Address"
-  name="permanentAddressData.address"
-  value={userData.permanentAddressData.permanentAddress}
-  onChange={handleChange}
-  margin="normal"
-  required
-  multiline
-  rows={3}
-/>
-<TextField
-  fullWidth
-  label="Permanent Address Latitude"
-  name="permanentAddressData.latitude"
-  value={userData.permanentAddressData.latitude}
-  margin="normal"
-  required
-  disabled
-/>
-<TextField
-  fullWidth
-  label="Permanent Address Longitude"
-  name="permanentAddressData.longitude"
-  value={userData.permanentAddressData.longitude}
-  margin="normal"
-  required
-  disabled
-/>
+          />
 
 
           <Button
@@ -691,11 +641,11 @@ const ProfileForm = () => {
             label="Same as Permanent Address"
           />
 
-          {/* <TextField
+          <TextField
             fullWidth
             label="Correspondence Address"
-            name="correspondenceAddress"
-            value={userData.correspondenceAddress}
+            name="residentialAddressData.address"
+            value={userData.residentialAddressData.residentialAddress}
             onChange={handleChange}
             margin="normal"
             required
@@ -703,57 +653,24 @@ const ProfileForm = () => {
             rows={3}
             disabled={sameAddress}
           />
-
           <TextField
             fullWidth
             label="Correspondence Address Latitude"
-            name="correspondenceLatitude"
-            value={userData.correspondenceLatitude}
+            name="residentialAddressData.latitude"
+            value={userData.residentialAddressData.latitude}
             margin="normal"
             required
             disabled
           />
-
           <TextField
             fullWidth
             label="Correspondence Address Longitude"
-            name="correspondenceLongitude"
-            value={userData.correspondenceLongitude}
+            name="residentialAddressData.longitude"
+            value={userData.residentialAddressData.longitude}
             margin="normal"
             required
             disabled
-          /> */}
-<TextField
-  fullWidth
-  label="Correspondence Address"
-  name="residentialAddressData.address"
-  value={userData.residentialAddressData.residentialAddress}
-  onChange={handleChange}
-  margin="normal"
-  required
-  multiline
-  rows={3}
-  disabled={sameAddress}
-/>
-<TextField
-  fullWidth
-  label="Correspondence Address Latitude"
-  name="residentialAddressData.latitude"
-  value={userData.residentialAddressData.latitude}
-  margin="normal"
-  required
-  disabled
-/>
-<TextField
-  fullWidth
-  label="Correspondence Address Longitude"
-  name="residentialAddressData.longitude"
-  value={userData.residentialAddressData.longitude}
-  margin="normal"
-  required
-  disabled
-/>
-
+          />
 
           <Button
             type="button"
@@ -869,21 +786,33 @@ const ProfileForm = () => {
             </Button>
           </Box>
 
-<Typography sx={{ marginTop: 2, marginBottom: 1 }}>Wallet Balance</Typography>
-<TextField
-  fullWidth
-  label="Wallet Balance"
-  name="walletBalance"
-  type="number"
-  value={userData.walletBalance}
-  onChange={handleChange}
-  margin="normal"
-  required
-  inputProps={{ min: 0 }}
-/>
+          <Typography sx={{ marginTop: 2, marginBottom: 1 }}>Wallet Balance</Typography>
+          {/* <TextField
+            fullWidth
+            label="Wallet Balance"
+            name="walletBalance"
+            type="number"
+            value={userData.walletBalance}
+            onChange={handleChange}
+            margin="normal"
+            required
+            inputProps={{ min: 0 }}
+          /> */}
+          <TextField
+            fullWidth
+            label="Wallet Balance"
+            name="walletBalance"
+            type="number"
+            value={userData.walletBalance}
+            onChange={handleChange}
+            margin="normal"
+            required
+            inputProps={{ min: 0 }}
+            error={!!walletError}
+            helperText={walletError}
+          />
 
-
-          <Button
+          {/* <Button
             type="submit"
             variant="contained"
             color="primary"
@@ -891,7 +820,19 @@ const ProfileForm = () => {
             sx={{ marginTop: 2 }}
           >
             Update Profile
+          </Button> */}
+
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            fullWidth
+            sx={{ marginTop: 2 }}
+            disabled={!!walletError}
+          >
+            Update Profile
           </Button>
+
           <Button
             variant="outlined"
             color="secondary"
