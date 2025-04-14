@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
+import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
@@ -17,6 +18,7 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Spinner
 import android.widget.TextView
+import android.widget.Toast
 import android.widget.ToggleButton
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
@@ -248,6 +250,7 @@ class MainActivity : ComponentActivity() {
                 }
                 */
 
+                /*
                 user?.let {
                     previousVehicleId?.let { vehicleId -> FirebaseHelper.setVehicleInactive(user!!.uid, vehicleId) }
                     currentVehicleId?.let { vehicleId -> FirebaseHelper.setVehicleInactive(user!!.uid, vehicleId) }
@@ -255,6 +258,7 @@ class MainActivity : ComponentActivity() {
                     currentVehicleId = null
                     previousVehicleId = null
                 }
+                */
             }
         }
 
@@ -281,7 +285,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // Schedule the daily reset of distances at midnight
-        scheduleDailyReset()
+        startDailyResetScheduler()
     }
 
     private fun updateLocation(location: Location) {
@@ -306,7 +310,7 @@ class MainActivity : ComponentActivity() {
                 println("Speed limit updated: $speedLimit km/h")
             }
 
-            if (speed > 0) {// speedLimit) {
+            if (speed > speedLimit) {
                 if (currentVehicleId != null) {
                     FirebaseHelper.saveOverSpeedPenalty(user!!.uid, location, speed, speedLimit, currentVehicleId!!)
                 } else {
@@ -513,6 +517,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        dailyResetHandler.removeCallbacks(dailyResetRunnable)
     }
 
 
@@ -609,27 +614,59 @@ class MainActivity : ComponentActivity() {
     }
 
 
-    private fun scheduleDailyReset() {
+    private val dailyResetHandler = Handler(Looper.getMainLooper())
+    private var resetScheduled = false
+
+    private val dailyResetRunnable = Runnable {
+        Log.d("DailyReset", "Executing daily reset at ${System.currentTimeMillis()}")
+
+        user?.uid?.let { userId ->
+            currentVehicleId?.let { vehicleId ->
+                // 1. Save current day's data
+                saveVehicleData(userId, vehicleId)
+
+                Handler(Looper.getMainLooper()).postDelayed({
+                    // Code to be executed after 6 seconds
+                    // This runs on the main (UI) thread
+                }, 6000) // 6000 milliseconds = 6 seconds
+
+                // 2. Reset values
+                todayTotalDistance = 0.0
+                todayTotalHighwayDistance = 0.0
+
+                // 3. Immediately schedule next reset
+                resetScheduled = false
+                scheduleNextDailyReset()
+            }
+        }
+    }
+
+    private fun scheduleNextDailyReset() {
+        if (resetScheduled) return
+
         val calendar = Calendar.getInstance().apply {
             timeInMillis = System.currentTimeMillis()
-            set(Calendar.HOUR_OF_DAY, 23)
+            // Set to midnight (or your desired reset time)
+            set(Calendar.HOUR_OF_DAY, 23) // 0 for midnight
             set(Calendar.MINUTE, 59)
-            set(Calendar.SECOND, 55)
+            set(Calendar.SECOND, 56)
+            set(Calendar.MILLISECOND, 0)
+
+            // If time already passed today, schedule for tomorrow
+            if (timeInMillis <= System.currentTimeMillis()) {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
         }
 
-        val currentTime = System.currentTimeMillis()
-        val initialDelay = calendar.timeInMillis - currentTime
+        val delay = calendar.timeInMillis - System.currentTimeMillis()
 
-        val handler = android.os.Handler(Looper.getMainLooper())
-        handler.postDelayed({
-            user?.uid?.let { userId ->
-                currentVehicleId?.let { vehicleId ->
-                    saveVehicleData(userId, vehicleId)
-                    previousLocation = null
-                    getVehicleData(userId, vehicleId)
-                    Log.d("DailyReset", "Daily reset complete for vehicle $vehicleId")
-                }
-            }
-        }, initialDelay)
+        Log.d("DailyReset", "Next reset scheduled in ${delay / 1000} seconds at ${calendar.time}")
+        resetScheduled = true
+        dailyResetHandler.postDelayed(dailyResetRunnable, delay)
+    }
+
+    fun startDailyResetScheduler() {
+        resetScheduled = false
+        scheduleNextDailyReset()
     }
 }
