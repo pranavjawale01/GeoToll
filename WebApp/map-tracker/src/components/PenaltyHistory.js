@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { get, ref, set } from "firebase/database";
 import { database } from "../firebase";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { Alert } from "@mui/material";
 
 import {
   Box,
@@ -19,7 +21,8 @@ import {
   Select,
   MenuItem,
   Button,
-  Checkbox
+  Checkbox,
+  Stack
 } from "@mui/material";
 
 const PenaltyTable = () => {
@@ -30,19 +33,20 @@ const PenaltyTable = () => {
   const [showCheckboxes, setShowCheckboxes] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [totalSelectedAmount, setTotalSelectedAmount] = useState(0); // Total selected amount 
+  const [totalSelectedAmount, setTotalSelectedAmount] = useState(0);
   const [paidPenalties, setPaidPenalties] = useState([]);
-  const [walletBalance, setWalletBalance] = useState(0); //State to hold wallet balance
+  const [walletBalance, setWalletBalance] = useState(0);
 
   const { userId } = useAuth();
+  const navigate = useNavigate(); 
 
-useEffect(() => {
+  useEffect(() => {
     const fetchDates = async () => {
       if (userId) {
         try {
           const penaltyRef = ref(database, `penalties/${userId}`);
           const snapshot = await get(penaltyRef);
-  
+
           if (snapshot.exists()) {
             const data = snapshot.val();
             const sortedDates = Object.keys(data).sort((a, b) => {
@@ -50,15 +54,13 @@ useEffect(() => {
               const [dayB, monthB, yearB] = b.split("-").map(Number);
               const dateA = new Date(yearA, monthA - 1, dayA);
               const dateB = new Date(yearB, monthB - 1, dayB);
-              return dateA - dateB; // ascending order
+              return dateA - dateB;
             });
             setDates(sortedDates);
-          }
-           else {
+          } else {
             setError("No penalties found.");
           }
-  
-          //Fetch wallet balance
+
           const walletRef = ref(database, `users/${userId}/walletBalance`);
           const walletSnapshot = await get(walletRef);
           if (walletSnapshot.exists()) {
@@ -72,19 +74,18 @@ useEffect(() => {
         }
       }
     };
-  
+
     fetchDates();
   }, [userId]);
-  
 
-const handleDateChange = async (event) => {
+  const handleDateChange = async (event) => {
     const date = event.target.value;
     setSelectedDate(date);
     setPenaltyDetails([]);
     setSelectedPenalties([]);
     setShowCheckboxes(false);
     setPaidPenalties([]);
-  
+
     try {
       const snapshot = await get(ref(database, `penalties/${userId}/${date}`));
       if (snapshot.exists()) {
@@ -93,11 +94,10 @@ const handleDateChange = async (event) => {
           time,
           ...values,
         }));
-  
-        // Separate paid and unpaid penalties
-        const unpaid = allDetails.filter((item) => !item.penalty_paid);
-        const paid = allDetails.filter((item) => item.penalty_paid);
-  
+
+        const unpaid = allDetails.filter((item) => !item.penaltyPaid);
+        const paid = allDetails.filter((item) => item.penaltyPaid);
+
         setPenaltyDetails(unpaid);
         setPaidPenalties(paid);
       }
@@ -105,9 +105,8 @@ const handleDateChange = async (event) => {
       console.error("Error fetching date details:", err);
     }
   };
-  
 
-const toggleCheckbox = (index) => {
+  const toggleCheckbox = (index) => {
     setSelectedPenalties((prev) => {
       let updated;
       if (prev.includes(index)) {
@@ -115,269 +114,215 @@ const toggleCheckbox = (index) => {
       } else {
         updated = [...prev, index];
       }
-  
-      // Calculate total based on updated selected indexes
+
       const total = updated.reduce(
-        (sum, i) => sum + (penaltyDetails[i]?.penalty_charge || 0),
+        (sum, i) => sum + (penaltyDetails[i]?.penaltyCharge || 0),
         0
       );
       setTotalSelectedAmount(total);
-  
+
       return updated;
     });
   };
-  
 
-const handlePayPenaltiesClick = () => {
+  const handlePayPenaltiesClick = () => {
     setShowCheckboxes(true);
     setSelectedPenalties([]);
     setTotalSelectedAmount(0);
   };
-  
-const handleProceedToPay = async () => {
-  // Calculate new balance after deduction
-  const newBalance = walletBalance - totalSelectedAmount;
 
-  // Ensure the new balance will not be less than ₹500
-  if (newBalance < 500) {
-    alert("Insufficient balance! You need at least ₹500 in your wallet after the payment.");
-    return;
-  }
+  const handleProceedToPay = async () => {
+    const newBalance = walletBalance - totalSelectedAmount;
 
-  // Check if the total selected amount is greater than the wallet balance
-  if (totalSelectedAmount > walletBalance) {
-    alert("Insufficient wallet balance to proceed with the payment.");
-    return;
-  }
-
-  const updates = [...penaltyDetails]; // local copy to update paid penalties
-  const paidItems = [];
-
-  try {
-    // Mark each selected penalty as paid in Firebase
-    for (const index of selectedPenalties) {
-      const item = penaltyDetails[index];
-      const penaltyRef = ref(database, `penalties/${userId}/${selectedDate}/${item.time}`);
-
-      await set(penaltyRef, {
-        ...item,
-        penalty_paid: true,
-      });
-
-      // Mark it as paid locally
-      updates[index].penalty_paid = true;
-      paidItems.push({ ...updates[index] });
+    if (newBalance < 500) {
+      alert("Insufficient balance! You need at least ₹500 in your wallet after the payment.");
+      return;
     }
 
-    // Update wallet balance in Firebase with the new balance
-    const walletRef = ref(database, `users/${userId}/walletBalance`);
-    await set(walletRef, newBalance);
+    if (totalSelectedAmount > walletBalance) {
+      alert("Insufficient wallet balance to proceed with the payment.");
+      return;
+    }
 
-    // Update local state with the new wallet balance
-    setWalletBalance(newBalance);
+    const updates = [...penaltyDetails];
+    const paidItems = [];
 
-    // Update penalty details to remove paid items
-    const remainingUnpaid = updates.filter((item) => !item.penalty_paid);
-    setPenaltyDetails(remainingUnpaid);
+    try {
+      for (const index of selectedPenalties) {
+        const item = penaltyDetails[index];
+        const penaltyRef = ref(database, `penalties/${userId}/${selectedDate}/${item.time}`);
 
-    // Update paid penalties state
-    setPaidPenalties((prev) => [...prev, ...paidItems]);
+        await set(penaltyRef, {
+          ...item,
+          penaltyPaid: true,
+        });
 
-    // Reset selected penalties and UI
-    setSelectedPenalties([]);
-    setShowCheckboxes(false);
-    setTotalSelectedAmount(0);
+        updates[index].penaltyPaid = true;
+        paidItems.push({ ...updates[index] });
+      }
 
-    alert("Payment successful! Wallet balance updated.");
-  } catch (err) {
-    console.error("Error during payment:", err);
-    alert("An error occurred while processing the payment. Please try again.");
-  }
-};
+      const walletRef = ref(database, `users/${userId}/walletBalance`);
+      await set(walletRef, newBalance);
 
-  
+      setWalletBalance(newBalance);
+
+      const remainingUnpaid = updates.filter((item) => !item.penaltyPaid);
+      setPenaltyDetails(remainingUnpaid);
+      setPaidPenalties((prev) => [...prev, ...paidItems]);
+      setSelectedPenalties([]);
+      setShowCheckboxes(false);
+      setTotalSelectedAmount(0);
+
+      alert("Payment successful! Wallet balance updated.");
+    } catch (err) {
+      console.error("Error during payment:", err);
+      alert("An error occurred while processing the payment. Please try again.");
+    }
+  };
+
+  const handleAddFunds = () => {
+    navigate("/profile");
+  };
+
+  const isPaymentDisabled =
+    selectedPenalties.length === 0 ||
+    totalSelectedAmount === 0 ||
+    totalSelectedAmount > walletBalance - 500;
+
   return (
-    <Box
-      sx={{
-        maxWidth: 900,
-        mx: "auto",
-        pt: { xs: 10, sm: 12 },
-        px: 2,
-        textAlign: "center"
-      }}
-    >
-      <Typography variant="h5" fontWeight="bold" gutterBottom>
+    <Box sx={{ maxWidth: 900, mx: "auto", pt: 10, px: 2 }}>
+      <Typography variant="h5" fontWeight="bold" gutterBottom align="center">
         Penalty Records
       </Typography>
-  
+
       {loading ? (
         <Box display="flex" justifyContent="center" mt={4}>
           <CircularProgress size={40} />
         </Box>
       ) : error ? (
-        <Typography color="error" mt={3}>
-          {error}
-        </Typography>
+        <Alert severity="error" sx={{ mt: 3 }}>{error}</Alert>
       ) : (
         <>
-          <FormControl fullWidth sx={{ mt: 3 }}>
-            <InputLabel id="date-select-label">Select Date</InputLabel>
-            <Select
-              labelId="date-select-label"
-              value={selectedDate}
-              label="Select Date"
-              onChange={handleDateChange}
-              size="medium"
-            >
-              {dates.map((date, index) => (
-                <MenuItem key={index} value={date}>
-                  {date}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-  
-          {penaltyDetails.length > 0 && (
-            <>
+          <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
+            <FormControl fullWidth>
+              <InputLabel id="date-select-label">Select Date</InputLabel>
+              <Select
+                labelId="date-select-label"
+                value={selectedDate}
+                label="Select Date"
+                onChange={handleDateChange}
+              >
+                {dates.map((date, index) => (
+                  <MenuItem key={index} value={date}>
+                    {date}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-            <Box display="flex" justifyContent="space-between" alignItems="center" mt={3}>
-            <Button
-                variant="contained"
-                color="primary"
-                onClick={handlePayPenaltiesClick}
-            >
-                Pay Penalties
-            </Button>
-            <Typography variant="subtitle1" sx={{ ml: 2 }}>
-                💰 Wallet Balance: ₹{walletBalance}
-            </Typography>
-            </Box>
+            {penaltyDetails.length > 0 && (
+              <>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mt={3}>
+                  <Button variant="contained" color="primary" onClick={handlePayPenaltiesClick}>
+                    Pay Penalties
+                  </Button>
+                  <Typography>
+                    💰 <strong>Wallet Balance:</strong> ₹{walletBalance}
+                  </Typography>
+                </Stack>
 
-              <TableContainer component={Paper} sx={{ mt: 3 }}>
-                <Table>
-                  <TableHead sx={{ backgroundColor: "#f5f5f5" }}>
-                    <TableRow>
-                      {showCheckboxes && (
-                        <TableCell>
-                          <strong>Select</strong>
-                        </TableCell>
-                      )}
-                      <TableCell>
-                        <strong>Time</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Speed (km/h)</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Latitude</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Longitude</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Penalty</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Email Sent</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Penalty Paid</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Vehicle ID</strong>
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {penaltyDetails.map((item, index) => (
-                      <TableRow key={index}>
-                        {showCheckboxes && (
-                          <TableCell>
-                            <Checkbox
-                            checked={selectedPenalties.includes(index)}
-                            onChange={() => toggleCheckbox(index)}
-                            />
-                          </TableCell>
-                        )}
-                        <TableCell>{item.time}</TableCell>
-                        <TableCell>{item.speed}</TableCell>
-                        <TableCell>{item.lat}</TableCell>
-                        <TableCell>{item.lon}</TableCell>
-                        <TableCell>₹{item.penalty_charge}</TableCell>
-                        <TableCell>{item.email_sent ? "Yes" : "No"}</TableCell>
-                        <TableCell>{item.penalty_paid ? "Yes" : "No"}</TableCell>
-                        <TableCell>{item.vehicle_id}</TableCell>
+                <TableContainer component={Paper} sx={{ mt: 3 }}>
+                  <Table>
+                    <TableHead sx={{ backgroundColor: "#f5f5f5" }}>
+                      <TableRow>
+                        {showCheckboxes && <TableCell><strong>Select</strong></TableCell>}
+                        <TableCell><strong>Time</strong></TableCell>
+                        <TableCell><strong>Speed</strong></TableCell>
+                        <TableCell><strong>Latitude</strong></TableCell>
+                        <TableCell><strong>Longitude</strong></TableCell>
+                        <TableCell><strong>Penalty</strong></TableCell>
+                        <TableCell><strong>Email Sent</strong></TableCell>
+                        <TableCell><strong>Paid</strong></TableCell>
+                        <TableCell><strong>Vehicle ID</strong></TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-  
-              {showCheckboxes && selectedPenalties.length > 0 && (
-              <Typography variant="h6" sx={{ mt: 2 }}>
-                Total Amount to Pay: ₹{totalSelectedAmount}
-              </Typography>
-              )}
+                    </TableHead>
+                    <TableBody>
+                      {penaltyDetails.map((item, index) => (
+                        <TableRow key={index}>
+                          {showCheckboxes && (
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedPenalties.includes(index)}
+                                onChange={() => toggleCheckbox(index)}
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell>{item.time}</TableCell>
+                          <TableCell>{item.speed}</TableCell>
+                          <TableCell>{item.latitude}</TableCell>
+                          <TableCell>{item.longitude}</TableCell>
+                          <TableCell>₹{item.penaltyCharge}</TableCell>
+                          <TableCell>{item.email_sent ? "Yes" : "No"}</TableCell>
+                          <TableCell>{item.penaltyPaid ? "Yes" : "No"}</TableCell>
+                          <TableCell>{item.vehicleId}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
 
-            {showCheckboxes && totalSelectedAmount > walletBalance - 500 && (
-            <Typography variant="body2" color="error" sx={{ mt: 1, display: "flex", alignItems: "center", gap: 1 }}>
-              ⚠️ Insufficient wallet balance. You need at least ₹500 in your wallet to proceed.
-            </Typography>
+                {showCheckboxes && selectedPenalties.length > 0 && (
+                  <Typography variant="h6" mt={2}>
+                    Total Amount to Pay: ₹{totalSelectedAmount}
+                  </Typography>
+                )}
+
+                {showCheckboxes && totalSelectedAmount > walletBalance - 500 && (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    Wallet must retain a minimum balance of ₹500 after payment. Please add funds.
+                  </Alert>
+                )}
+
+                {showCheckboxes && (
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="center" mt={3}>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      onClick={handleProceedToPay}
+                      disabled={isPaymentDisabled}
+                    >
+                      Proceed to Pay
+                    </Button>
+                    {selectedPenalties.length > 0 &&
+                      totalSelectedAmount > 0 &&
+                      walletBalance - totalSelectedAmount < 500 && (
+                        <Button variant="outlined" color="primary" onClick={handleAddFunds}>
+                          Add Funds
+                        </Button>
+                      )}
+                  </Stack>
+                )}
+              </>
             )}
+          </Paper>
 
-
-            {showCheckboxes && (
-              <Button
-              variant="contained"
-              color="success"
-              sx={{ mt: 3 }}
-              onClick={handleProceedToPay}
-              disabled={
-                selectedPenalties.length === 0 ||
-                totalSelectedAmount === 0 ||
-                totalSelectedAmount > walletBalance - 500 
-              }
-            >
-              Proceed to Pay
-            </Button>            
-            )}
-
-            </>
-          )}
-  
           {paidPenalties.length > 0 && (
-            <>
-              <Typography variant="h6" sx={{ mt: 5 }}>
+            <Paper elevation={3} sx={{ p: 3, mt: 5 }}>
+              <Typography variant="h6" gutterBottom>
                 Paid Penalties
               </Typography>
-              <TableContainer component={Paper} sx={{ mt: 2 }}>
+              <TableContainer>
                 <Table>
                   <TableHead sx={{ backgroundColor: "#e0ffe0" }}>
                     <TableRow>
-                      <TableCell>
-                        <strong>Time</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Speed (km/h)</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Latitude</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Longitude</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Penalty</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Email Sent</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Penalty Paid</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Vehicle ID</strong>
-                      </TableCell>
+                      <TableCell><strong>Time</strong></TableCell>
+                      <TableCell><strong>Speed</strong></TableCell>
+                      <TableCell><strong>Latitude</strong></TableCell>
+                      <TableCell><strong>Longitude</strong></TableCell>
+                      <TableCell><strong>Penalty</strong></TableCell>
+                      <TableCell><strong>Email Sent</strong></TableCell>
+                      <TableCell><strong>Paid</strong></TableCell>
+                      <TableCell><strong>Vehicle ID</strong></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -385,26 +330,23 @@ const handleProceedToPay = async () => {
                       <TableRow key={index}>
                         <TableCell>{item.time}</TableCell>
                         <TableCell>{item.speed}</TableCell>
-                        <TableCell>{item.lat}</TableCell>
-                        <TableCell>{item.lon}</TableCell>
-                        <TableCell>₹{item.penalty_charge}</TableCell>
+                        <TableCell>{item.latitude}</TableCell>
+                        <TableCell>{item.longitude}</TableCell>
+                        <TableCell>₹{item.penaltyCharge}</TableCell>
                         <TableCell>{item.email_sent ? "Yes" : "No"}</TableCell>
                         <TableCell>Yes</TableCell>
-                        <TableCell>{item.vehicle_id}</TableCell>
+                        <TableCell>{item.vehicleId}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </TableContainer>
-            </>
+            </Paper>
           )}
         </>
       )}
     </Box>
-  );  
+  );
 };
 
 export default PenaltyTable;
-
-
-

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { get, ref, update } from "firebase/database";
 import { database } from "../firebase";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+
 import {
   Box,
   Typography,
@@ -24,6 +26,7 @@ import {
 
 const HighwayDistanceTable = () => {
   const { userId } = useAuth();
+  const navigate = useNavigate();
 
   const [vehicleNumbers, setVehicleNumbers] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState("");
@@ -46,7 +49,7 @@ const HighwayDistanceTable = () => {
         const snapshot = await get(vehiclesRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
-          const vehicles = Object.keys(data).filter((key) => key !== "0");
+          const vehicles = Object.keys(data).filter((key) => key !== "0" && key !== "null" );
           setVehicleNumbers(vehicles);
         } else {
           setVehicleNumbers([]);
@@ -77,6 +80,7 @@ const HighwayDistanceTable = () => {
           const allDates = snapshot.val();
 
           for (const date in allDates) {
+            if (date === "totalDistance" || date === "totalHighwayDistance") continue;
             const entry = allDates[date];
             const meters = entry.todayTotalHighwayDistance ?? 0;
             const km = (meters / 1000).toFixed(2);
@@ -135,10 +139,12 @@ const HighwayDistanceTable = () => {
   
 
   const handleProceedToPay = async () => {
-    if (walletBalance < totalAmount) {
-      setPaymentStatus("Insufficient balance");
+
+    if ((walletBalance - totalAmount) < 500) {
+      setPaymentStatus("Insufficient balance. Wallet must retain at least ₹500.");
       return;
     }
+    
 
     try {
       const newBalance = walletBalance - totalAmount;
@@ -154,7 +160,7 @@ const HighwayDistanceTable = () => {
         await update(distanceRef, {
           paidDistance: record.distance,
           paidAmount: record.price,
-          todayTotalHighwayDistance: 0,
+          //todayTotalHighwayDistance: 0,
           tollPayed: true,
         });
       });
@@ -174,6 +180,7 @@ const HighwayDistanceTable = () => {
       if (refreshedSnapshot.exists()) {
         const all = refreshedSnapshot.val();
         for (const date in all) {
+          if (date === "totalDistance" || date === "totalHighwayDistance") continue;
           const entry = all[date];
           const km = (entry.todayTotalHighwayDistance ?? 0) / 1000;
           const distance = km.toFixed(2);
@@ -199,26 +206,25 @@ const HighwayDistanceTable = () => {
     }
   };
 
-  return (
-    <Box sx={{ maxWidth: 800, mx: "auto", pt: 10, px: 2, textAlign: "center" }}>
-      <Typography variant="h5" fontWeight="bold" gutterBottom>
-        Highway Distance Records
-      </Typography>
-  
-      {loading ? (
-        <Box display="flex" justifyContent="center" mt={4}>
-          <CircularProgress size={40} />
-        </Box>
-      ) : (
-        <>
-          <FormControl fullWidth sx={{ mt: 3 }}>
+return (
+  <Box sx={{ maxWidth: 900, mx: "auto", pt: 10, px: 2 }}>
+    <Typography variant="h5" fontWeight="bold" gutterBottom align="center">
+      Highway Distance Records
+    </Typography>
+
+    {loading ? (
+      <Box display="flex" justifyContent="center" mt={4}>
+        <CircularProgress size={40} />
+      </Box>
+    ) : (
+      <>
+        <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
+          <FormControl fullWidth>
             <InputLabel>Select Vehicle</InputLabel>
             <Select
               value={selectedVehicle}
               label="Select Vehicle"
-              onChange={(e) => {
-                setSelectedVehicle(e.target.value);
-              }}
+              onChange={(e) => setSelectedVehicle(e.target.value)}
             >
               {vehicleNumbers.map((veh, idx) => (
                 <MenuItem key={idx} value={veh}>
@@ -227,13 +233,13 @@ const HighwayDistanceTable = () => {
               ))}
             </Select>
           </FormControl>
-  
+
           {selectedVehicle && (
             <>
-              <Typography variant="subtitle1" sx={{ mt: 4 }}>
-                <strong>💰 Wallet Balance:</strong> ₹{Number(walletBalance).toFixed(2)}
+              <Typography sx={{ mt: 4 }}>
+                💰 <strong>Wallet Balance:</strong> ₹{Number(walletBalance).toFixed(2)}
               </Typography>
-  
+
               <TableContainer component={Paper} sx={{ mt: 3 }}>
                 <Table>
                   <TableHead sx={{ backgroundColor: "#fff3e0" }}>
@@ -263,7 +269,7 @@ const HighwayDistanceTable = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-  
+
               {!showCheckboxes ? (
                 <Button
                   variant="contained"
@@ -275,87 +281,89 @@ const HighwayDistanceTable = () => {
                 </Button>
               ) : (
                 <>
-                  
                   <Typography sx={{ mt: 3 }}>
-                  <strong>Total Amount:</strong> ₹{totalAmount.toFixed(2)}
+                    <strong>Total Amount:</strong> ₹{totalAmount.toFixed(2)}
                   </Typography>
 
-                  {walletBalance < Number(totalAmount.toFixed(2)) && (
-                  <Alert severity="warning" sx={{ mt: 2 }}>
-                    Insufficient wallet balance. Please add funds to proceed.
-                  </Alert>
+                  {(walletBalance - totalAmount) < 500 && (
+                    <Alert severity="warning" sx={{ mt: 2 }}>
+                      Wallet must retain a minimum balance of ₹500 after payment. Please select fewer dates or add funds.
+                    </Alert>
                   )}
 
-  
-                  <Button
-                    variant="contained"
-                    color="success"
-                    sx={{ mt: 2 }}
-                    onClick={handleProceedToPay}
-                    // disabled={
-                    //   selectedDates.length === 0 ||
-                    //   totalAmount <= 0 ||
-                    //   walletBalance < totalAmount
-                    // }
-                    disabled={
-                      selectedDates.length === 0 ||
-                      totalAmount <= 0 ||
-                      walletBalance < Number(totalAmount.toFixed(2))
-                    }                    
-                  >
-                    Proceed to Pay
-                  </Button>
+                  <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 2, flexWrap: "wrap" }}>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      onClick={handleProceedToPay}
+                      disabled={
+                        selectedDates.length === 0 ||
+                        totalAmount <= 0 ||
+                        (walletBalance - totalAmount) < 500
+                      }
+                    >
+                      Proceed to Pay
+                    </Button>
+
+                    {(selectedDates.length > 0 && totalAmount > 0 && (walletBalance - totalAmount) < 500) && (
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => navigate("/profile")}
+                      >
+                        Add Funds
+                      </Button>
+                    )}
+                  </Box>
                 </>
               )}
-  
+
               {paymentStatus && (
-                <Box sx={{ mt: 2 }}>
-                  <Alert severity={
-                    paymentStatus === "Payment successful"
-                      ? "success"
-                      : paymentStatus === "Insufficient balance"
-                      ? "warning"
-                      : "error"
-                  }>
-                    {paymentStatus}
-                  </Alert>
-                </Box>
-              )}
-  
-              {paidRecords.length > 0 && (
-                <Box sx={{ mt: 6 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Toll Payment History
-                  </Typography>
-                  <TableContainer component={Paper}>
-                    <Table>
-                      <TableHead sx={{ backgroundColor: "#e8f5e9" }}>
-                        <TableRow>
-                          <TableCell><strong>Date</strong></TableCell>
-                          <TableCell><strong>Distance (km)</strong></TableCell>
-                          <TableCell><strong>Amount Paid (₹)</strong></TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {paidRecords.map((entry, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>{entry.date}</TableCell>
-                            <TableCell>{entry.distance}</TableCell>
-                            <TableCell>{entry.price}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Box>
+                <Alert severity={
+                  paymentStatus === "Payment successful"
+                    ? "success"
+                    : paymentStatus === "Insufficient balance"
+                    ? "warning"
+                    : "error"
+                } sx={{ mt: 2 }}>
+                  {paymentStatus}
+                </Alert>
               )}
             </>
           )}
-        </>
-      )}
-    </Box>
-  );
-  
+        </Paper>
+
+        {paidRecords.length > 0 && (
+          <Paper elevation={3} sx={{ p: 3, mt: 5 }}>
+            <Typography variant="h6" gutterBottom>
+              Toll Payment History
+            </Typography>
+            <TableContainer>
+              <Table>
+                <TableHead sx={{ backgroundColor: "#e8f5e9" }}>
+                  <TableRow>
+                    <TableCell><strong>Date</strong></TableCell>
+                    <TableCell><strong>Distance (km)</strong></TableCell>
+                    <TableCell><strong>Amount Paid (₹)</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {paidRecords.map((entry, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>{entry.date}</TableCell>
+                      <TableCell>{entry.distance}</TableCell>
+                      <TableCell>{entry.price}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        )}
+      </>
+    )}
+  </Box>
+);
 };
 
 export default HighwayDistanceTable;

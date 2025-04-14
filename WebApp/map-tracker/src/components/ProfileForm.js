@@ -812,16 +812,6 @@ const ProfileForm = () => {
             helperText={walletError}
           />
 
-          {/* <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            fullWidth
-            sx={{ marginTop: 2 }}
-          >
-            Update Profile
-          </Button> */}
-
           <Button
             type="submit"
             variant="contained"
