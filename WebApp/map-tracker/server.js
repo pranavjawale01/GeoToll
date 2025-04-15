@@ -200,9 +200,17 @@ function generateEmailTemplate({ title, preheader, greeting, content, actionButt
   `;
 }
 
+function cleanKeys(obj) {
+  const cleaned = {};
+  for (const key in obj) {
+    cleaned[key.trim()] = obj[key];
+  }
+  return cleaned;
+}
 
 // 📧 Login Notification
 async function sendLoginEmail(email, name) {
+  
   const mailOptions = {
     from: `Toll Management System <${process.env.EMAIL}>`,
     to: email,
@@ -254,44 +262,47 @@ async function sendLoginEmail(email, name) {
 
 // 📧 Penalty Notification
 async function sendPenaltyEmail(email, data, penaltyRef, name) {
+  console.log("📦 Data passed to email template:", JSON.stringify(data, null, 2));
+  const cleanedData = cleanKeys(data);
+  data = cleanedData;
+  console.log("📦 Data passed to email template:", JSON.stringify(data, null, 2));
   const mailOptions = {
     from: `Toll Management System <${process.env.EMAIL}>`,
     to: email,
     subject: "🚨 Overspeeding Penalty Alert",
     html: generateEmailTemplate({
       title: "Overspeeding Penalty",
-      preheader: `Penalty charge of ₹${data.penalty_charge || "0"} applied`,
+      preheader: `Penalty charge of ₹${data. penaltyCharge || "0"} applied`,
       greeting: `Dear ${name},`,
       content: `
         <p>Your vehicle has been recorded exceeding the speed limit in a toll zone.</p>
-        
+    
         <div class="card">
           <div class="detail-row">
             <div class="detail-label">Location:</div>
-            <div class="detail-value">${data.lat || "N/A"}, ${data.lon || "N/A"}</div>
+            <div class="detail-value">${data.latitude || "N/A"}, ${data.longitude || "N/A"}</div>
           </div>
           <div class="detail-row">
             <div class="detail-label">Recorded Speed:</div>
-            <div class="detail-value alert">${data.speed || "N/A"} km/h</div>
+            <div class="detail-value alert">${data. speed?.toFixed(2) || "N/A"} km/h</div>
           </div>
           <div class="detail-row">
             <div class="detail-label">Speed Limit:</div>
-            <div class="detail-value">${data.speed_limit || "N/A"} km/h</div>
+            <div class="detail-value">${data.speedLimit || "N/A"} km/h</div>
           </div>
           <div class="detail-row">
             <div class="detail-label">Penalty Amount:</div>
-            <div class="detail-value alert">₹${data.penalty_charge || "0"}</div>
+            <div class="detail-value alert">₹${data. penaltyCharge || "0"}</div>
           </div>
           <div class="detail-row">
             <div class="detail-label">Timestamp:</div>
-            <div class="detail-value">${data.timestamp || "Unknown"}</div>
+            <div class="detail-value">${data. timeStamp || "Unknown"}</div>
           </div>
         </div>
         
         <p>This penalty will be added to your next toll payment invoice.</p>
         <p>Please ensure you adhere to posted speed limits for your safety and the safety of others.</p>
       `,
-
       footerNote: "You may contest this penalty within 7 days of issuance."
     })
   };
@@ -369,6 +380,7 @@ penaltiesRef.on("child_added", (userSnap) => {
   userSnap.forEach((dateSnap) => {
     dateSnap.ref.on("child_added", async (timeSnap) => {
       const data = timeSnap.val();
+      //console.log(`Penalty Data for ${userId}:`, data);
 
       // Skip if email already sent
       if (data.email_sent) return;
@@ -440,7 +452,7 @@ gpsFailedRef.on("child_added", (userSnap) => {
       const time = timeSnap.key;
       const data = timeSnap.val();
 
-      console.log(`GPS Failure Data for ${userId} at ${date} ${time}:`, data);
+      //console.log(`GPS Failure Data for ${userId} at ${date} ${time}:`, data);
 
       if (data.emailSent) return;
 
