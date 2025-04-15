@@ -1,0 +1,148 @@
+/* src/components/LoginPage/LoginPage.css */
+
+.system-title {
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  margin-bottom: 2rem !important;
+}
+
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  padding: 2rem;
+}
+
+.login-split-container {
+  display: flex;
+  width: 100%;
+  max-width: 1200px;
+  height: 60vh;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.login-half {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  box-sizing: border-box;
+}
+
+.user-login {
+  background-color: #f8f9fa;
+}
+
+.admin-login {
+  background-color: #ffffff;
+}
+
+.login-content {
+  width: 100%;
+  max-width: 400px;
+  padding: 20px;
+}
+
+.login-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.login-icon {
+  margin-right: 12px;
+  font-size: 2rem;
+}
+
+.user-icon {
+  color: #1976d2;
+}
+
+.admin-icon {
+  color: #ff7300;
+}
+
+.login-subtitle {
+  font-weight: bold;
+  color: #333;
+}
+
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-input {
+  width: 100%;
+}
+
+.input-icon {
+  margin-right: 8px;
+  color: rgba(0, 0, 0, 0.54);
+}
+
+.password-toggle {
+  min-width: unset;
+  padding: 0;
+}
+
+.error-message {
+  color: #f44336;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.login-button {
+  border-radius: 8px;
+  padding: 12px;
+  font-weight: bold;
+  text-transform: none;
+}
+
+.user-button {
+  background-color: #1976d2;
+}
+
+.admin-button {
+  background-color: #ff4800;
+}
+
+.login-divider {
+  height: 80%;
+  margin: auto 0;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.login-footer {
+  margin-top: 24px;
+  color: white;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .login-split-container {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .login-divider {
+    width: 80%;
+    height: 1px;
+    margin: 0 auto;
+  }
+  
+  .login-half {
+    padding: 40px 20px;
+  }
+}

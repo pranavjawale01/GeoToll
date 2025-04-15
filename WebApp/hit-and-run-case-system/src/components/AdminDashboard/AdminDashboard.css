@@ -1,0 +1,65 @@
+/* src/components/AdminDashboard/AdminDashboard.css */
+.admin-container {
+    max-width: 1200px;
+    margin: 32px auto;
+  }
+  
+  .admin-paper {
+    padding: 32px;
+    border-radius: 16px;
+  }
+  
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+  }
+  
+  .admin-title {
+    font-weight: bold;
+  }
+  
+  .logout-button {
+    border-radius: 12px;
+  }
+  
+  .admin-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 32px;
+  }
+  
+  .admin-icon {
+    margin-right: 8px;
+    font-size: 2rem;
+    color: #9c27b0;
+  }
+  
+  .admin-email {
+    margin-left: 8px;
+  }
+  
+  .cases-title {
+    margin-bottom: 16px;
+    font-weight: bold;
+  }
+  
+  .cases-list {
+    margin-bottom: 32px;
+  }
+  
+  .case-item {
+    margin-bottom: 8px;
+    border-radius: 8px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .case-text {
+    flex-grow: 1;
+  }
+  
+  .case-button {
+    margin-left: 16px;
+  }

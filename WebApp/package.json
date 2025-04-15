@@ -1,9 +1,0 @@
-{
-  "dependencies": {
-    "firebase": "^10.13.1",
-    "leaflet": "^1.9.4",
-    "react-leaflet": "^4.2.1",
-    "react-router-dom": "^6.26.2",
-    "uuid": "^10.0.0"
-  }
-}
