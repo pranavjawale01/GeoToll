@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getDatabase, ref, update, get } from "firebase/database";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { useAuth } from "../context/AuthContext"; // adjust the path as needed
+
 import {
   TextField,
   Button,
@@ -26,47 +28,46 @@ const Login = () => {
   const navigate = useNavigate();
   const auth = getAuth();
   const database = getDatabase();
+  const { login } = useAuth(); // Get login function from context
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
-
+  
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const passwordRegex =
       /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
+  
     if (!emailRegex.test(email)) {
       setError("Please enter a valid email address");
       return;
     }
-
+  
     if (!passwordRegex.test(password)) {
       setError(
         "Password must be at least 8 characters long, contain a number, and a special character"
       );
       return;
     }
-
+  
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const userId = userCredential.user.uid;
+      await login(email, password); // ✅ Login via context
+      const userId = auth.currentUser.uid; // get logged in user ID
       const userRef = ref(database, "users/" + userId);
       const snapshot = await get(userRef);
-
+  
       if (snapshot.exists()) {
         const storedUser = snapshot.val();
 
+  
         // Generate OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         setGeneratedOtp(otp);
         setStep(2);
         setTempUser({ userId, storedUser });
-
-        // Send OTP to user's email
+  
+        // Send OTP
         await fetch("http://localhost:3000/send-otp", {
           method: "POST",
           headers: {
@@ -74,8 +75,12 @@ const Login = () => {
           },
           body: JSON.stringify({ email, otp }),
         });
-
+  
         alert("OTP sent to your email.");
+        //await update(userRef, { login_email_sent: false });
+        //await update(userRef, { isLoggedIn: false });
+        //console.log(`User ${userId} login status changed: ${login_email_sent}`);
+
       } else {
         setError("User data not found.");
       }
@@ -83,8 +88,12 @@ const Login = () => {
       setError(err.message);
     }
   };
+  
 
   const handleVerifyOtp = async () => {
+    const userId = auth.currentUser.uid; // get logged in user ID
+      const userRef = ref(database, "users/" + userId);
+    await update(userRef, { isLoggedIn: false });
     setError("");
     if (enteredOtp === generatedOtp) {
       try {
@@ -92,6 +101,7 @@ const Login = () => {
         await update(userRef, {
           ...tempUser.storedUser,
           isLoggedIn: true,
+          login_email_sent: false,
         });
         navigate("/dashboard");
       } catch (err) {

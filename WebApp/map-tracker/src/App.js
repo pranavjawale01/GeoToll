@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
   Route,
@@ -9,20 +9,18 @@ import Login from "./components/Login";
 import Signup from "./components/Signup";
 import Dashboard from "./components/Dashboard";
 import ProfileForm from "./components/ProfileForm";
-import ForgotPassword from "./components/ForgotPassword"; // Import the ForgotPassword component
-import { AuthProvider } from "./context/AuthContext"; // Import AuthProvider
-import Navbar from "./components/Navbar";
+import ForgotPassword from "./components/ForgotPassword";
 import PenaltyTable from "./components/PenaltyHistory";
 import HighwayDistanceTable from "./components/TollCharge";
+import Navbar from "./components/Navbar";
+import { AuthProvider } from "./context/AuthContext";
+import SessionManager from "./components/SessionManager";
+import { onAuthStateChanged, getAuth } from "firebase/auth";
 
-// Created a wrapper component to conditionally render the Navbar
+// ⛳ Layout wrapper to conditionally show Navbar
 const AppLayout = ({ children }) => {
   const location = useLocation();
-
-  // Navbar is not displayed on the login, signup, and forgot-password pages.
-  const showNavbar = !["/", "/signup", "/forgot-password"].includes(
-    location.pathname
-  );
+  const showNavbar = !["/", "/signup", "/forgot-password"].includes(location.pathname);
 
   return (
     <>
@@ -33,16 +31,28 @@ const AppLayout = ({ children }) => {
 };
 
 const App = () => {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(getAuth(), (user) => {
+      setUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <AuthProvider>
       <Router>
+        {/* ✅ Always load SessionManager at top level if user is logged in */}
+        {user && <SessionManager />}
+
         <Routes>
-          {/* Pages without Navbar */}
+          {/* Routes without Navbar */}
           <Route path="/" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
 
-          {/* Pages with Navbar */}
+          {/* Routes with Navbar */}
           <Route
             path="/*"
             element={
