@@ -23,9 +23,9 @@ const modalStyle = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: '95%',  // Increased from 90%
-  maxWidth: '1200px',  // Increased maximum width
-  height: '90vh',
+  width: '90%',  // Decreased from 95%
+  maxWidth: '1100px',  // Decreased from 1200px
+  height: '90vh',  // Decreased from 90vh
   bgcolor: 'background.paper',
   boxShadow: 24,
   p: 3,
@@ -284,19 +284,45 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
   return (
     <Modal open={open} onClose={onClose}>
       <Box sx={modalStyle}>
-        <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
-          New Hit & Run Case Report
-        </Typography>
-        
+        {/* Header section with title and buttons */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 3 
+        }}>
+          <Typography variant="h5" gutterBottom>
+            New Hit & Run Case Report
+          </Typography>
+          
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button 
+              onClick={onClose} 
+              variant="outlined" 
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              disabled={loading || !formData.accidentLocation}
+              startIcon={loading ? <CircularProgress size={20} /> : null}
+            >
+              {loading ? 'Submitting...' : 'Submit Report'}
+            </Button>
+          </Box>
+        </Box>
+  
         {formError && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {formError}
           </Alert>
         )}
-
+  
         <form onSubmit={handleSubmit}>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={5}>
               <Stack spacing={2}>
                 <FormControl fullWidth>
                   <InputLabel>Vehicle ID</InputLabel>
@@ -312,7 +338,7 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
                     ))}
                   </Select>
                 </FormControl>
-
+  
                 {formData.vehicleId && (
                   <FormControl fullWidth>
                     <InputLabel>Accident Date</InputLabel>
@@ -331,7 +357,7 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
                     </Select>
                   </FormControl>
                 )}
-
+  
                 {formData.dateOfAccident && (
                   <FormControl fullWidth>
                     <InputLabel>Accident Time</InputLabel>
@@ -350,7 +376,7 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
                     </Select>
                   </FormControl>
                 )}
-
+  
                 <TextField
                   name="accidentDescription"
                   label="Accident Description"
@@ -364,8 +390,8 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
                 />
               </Stack>
             </Grid>
-
-            <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column' }}>
+  
+            <Grid item xs={12} md={7} sx={{ display: 'flex', flexDirection: 'column' }}>
               <Typography variant="subtitle1" gutterBottom>
                 Select Accident Location
               </Typography>
@@ -376,7 +402,7 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
                 </Alert>
               )}
               
-              <Box sx={{ flex: 1, minHeight: 400 }}>
+              <Box sx={{ flex: 1, maxHeight: 200, minWidth: 860, maxWidth: 860 }}>
                 <OSMMapPicker 
                   onLocationSelect={handleLocationSelect}
                   onError={handleMapError}
@@ -384,7 +410,7 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
                   pathData={pathData}
                 />
               </Box>
-
+  
               {formData.accidentLocation && (
                 <Box sx={{ p: 2, border: '1px solid #eee', borderRadius: 1, mt: 2 }}>
                   <Typography variant="subtitle2" gutterBottom>
@@ -399,20 +425,6 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
               )}
             </Grid>
           </Grid>
-
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
-            <Button onClick={onClose} variant="outlined" disabled={loading}>
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              variant="contained" 
-              disabled={loading || !formData.accidentLocation}
-              startIcon={loading ? <CircularProgress size={20} /> : null}
-            >
-              {loading ? 'Submitting...' : 'Submit Report'}
-            </Button>
-          </Box>
         </form>
       </Box>
     </Modal>

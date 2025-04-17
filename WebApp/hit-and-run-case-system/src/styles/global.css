@@ -24,14 +24,18 @@ body {
 }
 
 /* Remove any padding that might be constraining the map */
+/*
 .MuiGrid-root {
   padding-left: 0 !important;
   padding-right: 0 !important;
 }
+*/
 
 /* Make sure the modal content stretches */
+/*
 .MuiBox-root {
   display: flex;
   flex-direction: column;
   height: 100%;
-}
+} 
+*/
