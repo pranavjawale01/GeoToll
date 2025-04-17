@@ -107,23 +107,16 @@ const PenaltyTable = () => {
   };
 
   const toggleCheckbox = (index) => {
-    setSelectedPenalties((prev) => {
-      let updated;
-      if (prev.includes(index)) {
-        updated = prev.filter((i) => i !== index);
-      } else {
-        updated = [...prev, index];
-      }
-
-      const total = updated.reduce(
-        (sum, i) => sum + (penaltyDetails[i]?.penaltyCharge || 0),
-        0
-      );
-      setTotalSelectedAmount(total);
-
-      return updated;
-    });
+    if (selectedPenalties.includes(index)) {
+      setSelectedPenalties([]);
+      setTotalSelectedAmount(0);
+    } else {
+      const selectedAmount = penaltyDetails[index]?.penaltyCharge || 0;
+      setSelectedPenalties([index]);
+      setTotalSelectedAmount(selectedAmount);
+    }
   };
+  
 
   const handlePayPenaltiesClick = () => {
     setShowCheckboxes(true);
@@ -146,8 +139,6 @@ const PenaltyTable = () => {
 
     const updates = [...penaltyDetails];
     const paidItems = [];
-    let timeStamp;
-    let vehicleId;
 
     try {
       for (const index of selectedPenalties) {
@@ -160,8 +151,6 @@ const PenaltyTable = () => {
         });
 
         updates[index].penaltyPaid = true;
-        timeStamp = penaltyRef.timeStamp;
-        vehicleId = penaltyRef.vehicleId;
         paidItems.push({ ...updates[index] });
       }
 
@@ -182,7 +171,7 @@ const PenaltyTable = () => {
     const newTransaction = {
       [transactionId]: {
         Amount: totalSelectedAmount,
-        Type: "penalty",
+        Type: "Overspeeding Penalty",
         timeStamp: firstPenaltyData.timeStamp || "",
         vehicleId: firstPenaltyData.vehicleId || "",
         date: selectedDate

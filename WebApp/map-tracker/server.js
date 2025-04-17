@@ -371,6 +371,66 @@ async function sendGPSFailureEmail(email, name, data, date, time, gpsRef) {
   });
 }
 
+
+async function sendTransactionEmail(email, name, vehicleId, type, amount,date,timeStamp) {
+  const showTimestamp = timeStamp && timeStamp !== "0"; // Adjust based on your forma
+  const mailOptions = {
+    from: `Toll Management System <${process.env.EMAIL}>`,
+    to: email,
+    subject: `🧾 Transaction Bill - ₹${amount} | ${type.toUpperCase()}`,
+    html: generateEmailTemplate({
+      title: "Transaction Receipt",
+      preheader: `You have been charged ₹${amount} for a ${type} on ${date}`,
+      greeting: `Hello ${name},`,
+      content: `
+        <p>Here is your detailed bill for the recent <strong>${type}</strong> transaction on your registered vehicle.</p>
+
+        <div class="card">
+          <div class="detail-row">
+            <div class="detail-label">Vehicle ID:</div>
+            <div class="detail-value">${vehicleId}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Transaction Type:</div>
+            <div class="detail-value highlight">${type}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Amount:</div>
+            <div class="detail-value highlight">₹${amount}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Date:</div>
+            <div class="detail-value">${date}</div>
+          </div>
+          ${
+            showTimestamp
+              ? `<div class="detail-row">
+                  <div class="detail-label">Timestamp:</div>
+                  <div class="detail-value">${timeStamp}</div>
+                </div>`
+              : ""
+          }
+        </div>
+
+        <p>If this transaction seems incorrect, please reach out to our support team immediately.</p>
+      `,
+      footerNote: "Keep this receipt for your records. Contact support for any queries related to this bill."
+    })
+  };
+
+  await transporter.sendMail(mailOptions);
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error("Error sending transaction email:", error);
+    } else {
+      console.log("✅ Transaction email sent to:", email);
+    }
+  });
+}
+
+
+
 // 🔄 Listen for new penalty entries
 const penaltiesRef = db.ref("/penalties");
 
@@ -472,6 +532,50 @@ gpsFailedRef.on("child_added", (userSnap) => {
     });
   });
 });
+
+// 🔄 Listen for new transaction entries
+const transactionsRef = db.ref("/TransactionLogs");
+
+transactionsRef.on("child_added", (userSnap) => {
+  const userId = userSnap.key;
+
+  userSnap.forEach((dateSnap) => {
+    const transactionDate = dateSnap.key;
+
+    dateSnap.ref.on("child_added", async (timeSnap) => {
+      const data = timeSnap.val();
+
+      // Skip if email already sent
+      if (data.email_sent) return;
+
+      const transactionRef = timeSnap.ref;
+
+      // Fetch user's email & name
+      const userSnapshot = await db.ref(`/users/${userId}`).once("value");
+      if (userSnapshot.exists()) {
+        const userData = userSnapshot.val();
+        const email = userData.email;
+        const name = userData.name;
+
+        if (email) {
+          const vehicleId = data.vehicleId || userData.vehicleId || "N/A";
+          const type = data.Type || "unknown";
+          const amount = data.Amount || 0
+          const date = data.date || transactionDate;
+          const timeStamp = data.timeStamp || 0;
+
+          // Send the transaction bill
+          sendTransactionEmail(email,name,vehicleId,type,amount,date,timeStamp);
+
+          // Mark email as sent
+          await transactionRef.update({ email_sent: true });
+        }
+      }
+    });
+  });
+});
+
+
 
 // ✅ New Route to send OTP
 app.post("/send-otp", async (req, res) => {

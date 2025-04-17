@@ -172,7 +172,7 @@ const HighwayDistanceTable = () => {
             const newTransaction = {
               [transactionId]: {
                 Amount: record.price || 0.0,
-                Type: "toll",
+                Type: "Toll",
                 vehicleId:selectedVehicle|| "",
                 date: date
               }
