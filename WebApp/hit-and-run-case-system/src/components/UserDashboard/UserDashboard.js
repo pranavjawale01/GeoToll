@@ -63,7 +63,7 @@ const UserDashboard = () => {
   }, [currentUser, navigate]);
 
   const pendingCases = cases.filter(caseItem => caseItem.status === 'pending');
-  const completedCases = cases.filter(caseItem => caseItem.status === 'completed');
+  const completedCases = cases.filter(caseItem => caseItem.status === 'approved');
   const rejectedCases = cases.filter(caseItem => caseItem.status === 'rejected');
 
   const handleLogout = async () => {
