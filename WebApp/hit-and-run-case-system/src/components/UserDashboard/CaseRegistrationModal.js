@@ -23,17 +23,17 @@ const modalStyle = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: '90%',
-  maxWidth: 1000,
-  maxHeight: '90vh',
+  width: '95%',  // Increased from 90%
+  maxWidth: '1200px',  // Increased maximum width
+  height: '90vh',
   bgcolor: 'background.paper',
   boxShadow: 24,
   p: 3,
   overflow: 'auto'
 };
 
-const generateBoundingBox = (lat, lng, distance = 5) => {
-  const earthRadius = 6371; // km
+const generateBoundingBox = (lat, lng, distance = 1) => {
+  const earthRadius = 6371;
   const latDelta = distance / earthRadius * (180 / Math.PI);
   const lngDelta = distance / (earthRadius * Math.cos(lat * Math.PI / 180)) * (180 / Math.PI);
   
@@ -60,8 +60,8 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
   const [mapLocation, setMapLocation] = useState(null);
   const [mapError, setMapError] = useState(null);
   const [formError, setFormError] = useState(null);
+  const [pathData, setPathData] = useState([]);
 
-  // Fetch vehicles for this user
   useEffect(() => {
     if (!open || !userId) return;
     
@@ -70,7 +70,9 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
         const vehiclesRef = ref(database, `location/${userId}/coordinates`);
         const snapshot = await get(vehiclesRef);
         if (snapshot.exists()) {
-          setVehicles(Object.keys(snapshot.val()));
+          const vehicleIds = Object.keys(snapshot.val())
+            .filter(v => v && v.trim() !== '' && v.toLowerCase() !== 'null');
+          setVehicles(vehicleIds);
         } else {
           setVehicles([]);
         }
@@ -82,7 +84,6 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
     fetchVehicles();
   }, [open, userId]);
 
-  // Fetch dates when vehicle is selected
   useEffect(() => {
     if (!formData.vehicleId || !userId) return;
     
@@ -91,7 +92,20 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
         const datesRef = ref(database, `location/${userId}/coordinates/${formData.vehicleId}`);
         const snapshot = await get(datesRef);
         if (snapshot.exists()) {
-          setAvailableDates(Object.keys(snapshot.val()));
+          const dates = Object.keys(snapshot.val())
+            .filter(date => {
+              if (date === 'totalDistance' || date === 'totalHighwayDistance') return false;
+              const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
+              return dateRegex.test(date);
+            })
+            .sort((a, b) => {
+              const [dayA, monthA, yearA] = a.split('-').map(Number);
+              const [dayB, monthB, yearB] = b.split('-').map(Number);
+              if (yearA !== yearB) return yearB - yearA;
+              if (monthA !== monthB) return monthB - monthA;
+              return dayB - dayA;
+            });
+          setAvailableDates(dates);
         } else {
           setAvailableDates([]);
         }
@@ -103,7 +117,6 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
     fetchDates();
   }, [formData.vehicleId, userId]);
 
-  // Fetch times when date is selected
   useEffect(() => {
     if (!formData.vehicleId || !formData.dateOfAccident || !userId) return;
     
@@ -112,17 +125,80 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
         const timesRef = ref(database, 
           `location/${userId}/coordinates/${formData.vehicleId}/${formData.dateOfAccident}`);
         const snapshot = await get(timesRef);
+        
         if (snapshot.exists()) {
-          setAvailableTimes(Object.keys(snapshot.val()).map(time => time.substring(0, 5)));
+          const timeData = snapshot.val();
+          const times = Object.keys(timeData)
+            .filter(time => ![
+              'today', 
+              'todayTotalDistance', 
+              'todayTotalHighwayDistance',
+              'totalDistance',
+              'totalHighwayDistance'
+            ].includes(time))
+            .sort((a, b) => {
+              const toSeconds = (time) => {
+                const [hh, mm, ss] = time.split(':').map(Number);
+                return hh * 3600 + mm * 60 + ss;
+              };
+              return toSeconds(a) - toSeconds(b);
+            });
+          
+          setAvailableTimes(times);
         } else {
           setAvailableTimes([]);
         }
       } catch (error) {
         console.error('Error fetching times:', error);
+        setAvailableTimes([]);
       }
     };
 
     fetchTimes();
+  }, [formData.vehicleId, formData.dateOfAccident, userId]);
+
+  useEffect(() => {
+    if (!formData.vehicleId || !formData.dateOfAccident || !userId) return;
+    
+    const fetchPathData = async () => {
+      try {
+        const pathRef = ref(database, 
+          `location/${userId}/coordinates/${formData.vehicleId}/${formData.dateOfAccident}`);
+        const snapshot = await get(pathRef);
+        if (snapshot.exists()) {
+          const data = [];
+          Object.entries(snapshot.val()).forEach(([time, value]) => {
+            if (time === 'today' || 
+                time === 'todayTotalDistance' || 
+                time === 'todayTotalHighwayDistance') {
+              return;
+            }
+            
+            if (value.latitude && value.longitude) {
+              const highwayStatus = typeof value.isOnHighway === 'boolean' 
+                ? (value.isOnHighway ? 1 : 0)
+                : Number(value.isOnHighway) || 0;
+              
+              data.push({
+                time,
+                isOnHighway: highwayStatus,
+                latitude: parseFloat(value.latitude),
+                longitude: parseFloat(value.longitude)
+              });
+            }
+          });
+          
+          data.sort((a, b) => a.time.localeCompare(b.time));
+          setPathData(data);
+        } else {
+          setPathData([]);
+        }
+      } catch (error) {
+        console.error('Error fetching path data:', error);
+      }
+    };
+
+    fetchPathData();
   }, [formData.vehicleId, formData.dateOfAccident, userId]);
 
   const handleChange = (e) => {
@@ -131,12 +207,25 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
   };
 
   const handleLocationSelect = (location) => {
+    const isOnPath = pathData.some(point => {
+      const distance = Math.sqrt(
+        Math.pow(point.latitude - location.lat, 2) + 
+        Math.pow(point.longitude - location.lng, 2)
+      );
+      return distance < 0.001;
+    });
+
+    if (!isOnPath) {
+      setMapError('Please select a location along the vehicle path');
+      return;
+    }
+
     setMapLocation(location);
     setMapError(null);
     setFormData(prev => ({
       ...prev,
       accidentLocation: {
-        accidentLatitude: location.lat,  // Fixed typo from accidentLatiude to accidentLatitude
+        accidentLatitude: location.lat,
         accidentLongitude: location.lng,
         boundingBoxOfAccident: generateBoundingBox(location.lat, location.lng)
       }
@@ -156,7 +245,7 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
       if (!formData.accidentLocation) {
         throw new Error('Please select a location on the map');
       }
-  
+
       const reportData = {
         vehicleId: formData.vehicleId,
         dateOfAccident: formData.dateOfAccident,
@@ -170,7 +259,7 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
         },
         status: 'pending'
       };
-  
+
       const reportDate = new Date().toISOString().split('T')[0];
       const newReportRef = push(ref(database, `HitAndRunCaseReport/${userId}/${reportDate}`));
       await set(newReportRef, reportData);
@@ -206,9 +295,9 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
         )}
 
         <form onSubmit={handleSubmit}>
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
-              <Stack spacing={3}>
+              <Stack spacing={2}>
                 <FormControl fullWidth>
                   <InputLabel>Vehicle ID</InputLabel>
                   <Select
@@ -235,7 +324,9 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
                       label="Accident Date"
                     >
                       {availableDates.map(date => (
-                        <MenuItem key={date} value={date}>{date}</MenuItem>
+                        <MenuItem key={date} value={date}>
+                          {date.split('-').reverse().join('-')}
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -252,7 +343,9 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
                       label="Accident Time"
                     >
                       {availableTimes.map(time => (
-                        <MenuItem key={time} value={time}>{time}</MenuItem>
+                        <MenuItem key={time} value={time}>
+                          {time}
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -272,7 +365,7 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
               </Stack>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column' }}>
               <Typography variant="subtitle1" gutterBottom>
                 Select Accident Location
               </Typography>
@@ -283,16 +376,17 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
                 </Alert>
               )}
               
-              <Box sx={{ height: 400, mb: 2 }}>
+              <Box sx={{ flex: 1, minHeight: 400 }}>
                 <OSMMapPicker 
                   onLocationSelect={handleLocationSelect}
                   onError={handleMapError}
                   initialLocation={mapLocation}
+                  pathData={pathData}
                 />
               </Box>
 
               {formData.accidentLocation && (
-                <Box sx={{ p: 2, border: '1px solid #eee', borderRadius: 1 }}>
+                <Box sx={{ p: 2, border: '1px solid #eee', borderRadius: 1, mt: 2 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     Selected Location Coordinates
                   </Typography>

@@ -16,12 +16,22 @@ body {
   /* Add any global styles here */
 
 
-.leaflet-control-attribution {
-  font-size: 10px;
+/* Ensure Leaflet map fills its container */
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 500px;
 }
 
-.leaflet-container {
-  height: 400px;
-  width: 100%;
-  z-index: 0; /* Ensure it doesn't overlap with modal components */
+/* Remove any padding that might be constraining the map */
+.MuiGrid-root {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Make sure the modal content stretches */
+.MuiBox-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
