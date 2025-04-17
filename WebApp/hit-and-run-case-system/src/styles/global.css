@@ -14,3 +14,14 @@ body {
   }
   
   /* Add any global styles here */
+
+
+.leaflet-control-attribution {
+  font-size: 10px;
+}
+
+.leaflet-container {
+  height: 400px;
+  width: 100%;
+  z-index: 0; /* Ensure it doesn't overlap with modal components */
+}

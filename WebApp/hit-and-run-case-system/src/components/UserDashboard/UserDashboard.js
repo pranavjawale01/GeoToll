@@ -146,8 +146,8 @@ const CaseTable = ({ cases, loading }) => {
               </TableCell>
               <TableCell>
                 {caseItem.accidentLocation ? (
-                  `${caseItem.accidentLocation.accidentLatiude.toFixed(6)}, 
-                  ${caseItem.accidentLocation.accidentLongitude.toFixed(6)}`
+                  `${caseItem.accidentLocation.latitude?.toFixed?.(6) || 'N/A'}, 
+                  ${caseItem.accidentLocation.longitude?.toFixed?.(6) || 'N/A'}`
                 ) : 'N/A'}
               </TableCell>
               <TableCell sx={{ maxWidth: 300 }}>
