@@ -163,7 +163,27 @@ const HighwayDistanceTable = () => {
           //todayTotalHighwayDistance: 0,
           tollPayed: true,
         });
-      });
+            const today = new Date().toLocaleDateString("en-GB").split("/").join("-");
+            const transactionRef = ref(database, `TransactionLogs/${userId}/${today}`);
+            const transSnapshot = await get(transactionRef);
+            const existingLogs = transSnapshot.exists() ? transSnapshot.val() : {};
+            const transactionId = Object.keys(existingLogs).length + 1
+        
+            const newTransaction = {
+              [transactionId]: {
+                Amount: record.price || 0.0,
+                Type: "toll",
+                vehicleId:selectedVehicle|| "",
+                date: date
+              }
+            };
+        
+            await update(transactionRef, newTransaction);
+      }
+  
+    
+    
+    );
 
       await Promise.all(updates);
       setWalletBalance(newBalance);

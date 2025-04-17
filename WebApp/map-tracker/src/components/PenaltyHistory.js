@@ -169,14 +169,6 @@ const PenaltyTable = () => {
       await set(walletRef, newBalance);
 
       setWalletBalance(newBalance);
-
-
-
-
-
-
-
-
       
     const today = new Date().toLocaleDateString("en-GB").split("/").join("-");
     const transactionRef = ref(database, `TransactionLogs/${userId}/${today}`);
@@ -198,19 +190,6 @@ const PenaltyTable = () => {
     };
 
     await update(transactionRef, newTransaction);
-
-    alert("Penalty Paid Successfully!");
-
-
-
-
-
-
-
-
-
-
-
 
       const remainingUnpaid = updates.filter((item) => !item.penaltyPaid);
       setPenaltyDetails(remainingUnpaid);
