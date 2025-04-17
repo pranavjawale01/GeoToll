@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { get, ref, set } from "firebase/database";
+import { get, ref, set, update } from "firebase/database";
 import { database } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -146,6 +146,8 @@ const PenaltyTable = () => {
 
     const updates = [...penaltyDetails];
     const paidItems = [];
+    let timeStamp;
+    let vehicleId;
 
     try {
       for (const index of selectedPenalties) {
@@ -158,6 +160,8 @@ const PenaltyTable = () => {
         });
 
         updates[index].penaltyPaid = true;
+        timeStamp = penaltyRef.timeStamp;
+        vehicleId = penaltyRef.vehicleId;
         paidItems.push({ ...updates[index] });
       }
 
@@ -165,6 +169,48 @@ const PenaltyTable = () => {
       await set(walletRef, newBalance);
 
       setWalletBalance(newBalance);
+
+
+
+
+
+
+
+
+      
+    const today = new Date().toLocaleDateString("en-GB").split("/").join("-");
+    const transactionRef = ref(database, `TransactionLogs/${userId}/${today}`);
+    const transSnapshot = await get(transactionRef);
+    const existingLogs = transSnapshot.exists() ? transSnapshot.val() : {};
+    const transactionId = Object.keys(existingLogs).length + 1;
+
+    const firstPenaltyTime = selectedPenalties[0];
+    const firstPenaltyData = penaltyDetails[firstPenaltyTime] || {};
+
+    const newTransaction = {
+      [transactionId]: {
+        Amount: totalSelectedAmount,
+        Type: "penalty",
+        timeStamp: firstPenaltyData.timeStamp || "",
+        vehicleId: firstPenaltyData.vehicleId || "",
+        date: selectedDate
+      }
+    };
+
+    await update(transactionRef, newTransaction);
+
+    alert("Penalty Paid Successfully!");
+
+
+
+
+
+
+
+
+
+
+
 
       const remainingUnpaid = updates.filter((item) => !item.penaltyPaid);
       setPenaltyDetails(remainingUnpaid);
