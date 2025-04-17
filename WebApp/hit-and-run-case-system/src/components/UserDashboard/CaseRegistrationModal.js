@@ -23,9 +23,9 @@ const modalStyle = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: '90%',  // Decreased from 95%
-  maxWidth: '1100px',  // Decreased from 1200px
-  height: '90vh',  // Decreased from 90vh
+  width: '90%',
+  maxWidth: '1100px',
+  height: '90vh',
   bgcolor: 'background.paper',
   boxShadow: 24,
   p: 3,
@@ -284,43 +284,43 @@ const CaseRegistrationModal = ({ open, onClose, userId }) => {
   return (
     <Modal open={open} onClose={onClose}>
       <Box sx={modalStyle}>
-        {/* Header section with title and buttons */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 3 
-        }}>
-          <Typography variant="h5" gutterBottom>
-            New Hit & Run Case Report
-          </Typography>
-          
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button 
-              onClick={onClose} 
-              variant="outlined" 
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              variant="contained" 
-              disabled={loading || !formData.accidentLocation}
-              startIcon={loading ? <CircularProgress size={20} /> : null}
-            >
-              {loading ? 'Submitting...' : 'Submit Report'}
-            </Button>
-          </Box>
-        </Box>
-  
-        {formError && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {formError}
-          </Alert>
-        )}
-  
         <form onSubmit={handleSubmit}>
+          {/* Header section with title and buttons */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            mb: 3 
+          }}>
+            <Typography variant="h5" gutterBottom>
+              New Hit & Run Case Report
+            </Typography>
+            
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button 
+                onClick={onClose} 
+                variant="outlined" 
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                variant="contained" 
+                disabled={loading || !formData.accidentLocation}
+                startIcon={loading ? <CircularProgress size={20} /> : null}
+              >
+                {loading ? 'Submitting...' : 'Submit Report'}
+              </Button>
+            </Box>
+          </Box>
+
+          {formError && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {formError}
+            </Alert>
+          )}
+
           <Grid container spacing={2}>
             <Grid item xs={12} md={5}>
               <Stack spacing={2}>
