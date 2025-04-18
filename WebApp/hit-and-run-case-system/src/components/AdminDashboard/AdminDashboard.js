@@ -1,4 +1,3 @@
-// src/components/AdminDashboard/AdminDashboard.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../Auth/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -8,7 +7,8 @@ import {
   Button, 
   Paper, 
   List, 
-  ListItem, 
+  ListItem,
+  ListItemAvatar,
   ListItemText,
   CircularProgress,
   Alert,
@@ -23,7 +23,12 @@ import {
   Card,
   CardContent,
   CardHeader,
-  IconButton
+  IconButton,
+  Tooltip,
+  Badge,
+  Checkbox,
+  FormControlLabel,
+  Collapse
 } from '@mui/material';
 import { 
   Logout as LogoutIcon, 
@@ -35,7 +40,12 @@ import {
   DirectionsCar as CarIcon,
   CalendarToday as DateIcon,
   Schedule as TimeIcon,
-  Description as DescriptionIcon
+  Description as DescriptionIcon,
+  Warning as WarningIcon,
+  Error as ErrorIcon,
+  Verified as VerifiedIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import { ref, get, update } from 'firebase/database';
 import { database } from '../../firebase';
@@ -51,6 +61,10 @@ const AdminDashboard = () => {
   const [selectedCase, setSelectedCase] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [pathData, setPathData] = useState([]);
+  const [suspects, setSuspects] = useState([]);
+  const [processingSuspects, setProcessingSuspects] = useState(false);
+  const [selectedSuspects, setSelectedSuspects] = useState([]);
+  const [showSuspectSelection, setShowSuspectSelection] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -99,8 +113,176 @@ const AdminDashboard = () => {
     fetchPendingCases();
   }, []);
 
+  const calculateDistance = (coord1, coord2) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (coord2.lat - coord1.lat) * Math.PI / 180;
+    const dLon = (coord2.lng - coord1.lng) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(coord1.lat * Math.PI / 180) * Math.cos(coord2.lat * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in km
+  };
+
+  const isWithinBoundingBox = (point, box) => {
+    return (
+      point.lat >= box.xmin &&
+      point.lat <= box.xmax &&
+      point.lng >= box.ymin &&
+      point.lng <= box.ymax
+    );
+  };
+
+  const analyzeSuspects = async (currentCase) => {
+    try {
+      setProcessingSuspects(true);
+      const usersRef = ref(database, 'location');
+      const usersSnapshot = await get(usersRef);
+      
+      if (!usersSnapshot.exists()) {
+        return [];
+      }
+
+      const suspects = [];
+      const accidentTime = new Date(`${currentCase.dateOfAccident} ${currentCase.timeOfAccident}`);
+      const accidentLocation = {
+        lat: currentCase.accidentLocation.latitude,
+        lng: currentCase.accidentLocation.longitude
+      };
+      const boundingBox = currentCase.accidentLocation.boundingBox;
+
+      // Get all users except the one who reported the case
+      const userIds = Object.keys(usersSnapshot.val()).filter(id => id !== currentCase.userId);
+
+      for (const userId of userIds) {
+        const userVehiclesRef = ref(database, `location/${userId}/coordinates`);
+        const userVehiclesSnapshot = await get(userVehiclesRef);
+        
+        if (!userVehiclesSnapshot.exists()) continue;
+
+        const vehicleIds = Object.keys(userVehiclesSnapshot.val());
+        
+        for (const vehicleId of vehicleIds) {
+          const vehicleDatesRef = ref(database, `location/${userId}/coordinates/${vehicleId}`);
+          const vehicleDatesSnapshot = await get(vehicleDatesRef);
+          
+          if (!vehicleDatesSnapshot.exists()) continue;
+
+          // First check if the date matches the accident date
+          const dates = Object.keys(vehicleDatesSnapshot.val())
+            .filter(date => date === currentCase.dateOfAccident);
+          
+          if (dates.length === 0) continue;
+
+          for (const date of dates) {
+            const vehicleTimesRef = ref(database, `location/${userId}/coordinates/${vehicleId}/${date}`);
+            const vehicleTimesSnapshot = await get(vehicleTimesRef);
+            
+            if (!vehicleTimesSnapshot.exists()) continue;
+
+            const times = Object.keys(vehicleTimesSnapshot.val())
+              .filter(time => !['today', 'todayTotalDistance', 'todayTotalHighwayDistance'].includes(time));
+            
+            for (const time of times) {
+              const locationData = vehicleTimesSnapshot.val()[time];
+              if (!locationData.latitude || !locationData.longitude) continue;
+
+              // Convert to Date objects for comparison
+              const pointTime = new Date(`${date} ${time}`);
+              const timeDiff = Math.abs(pointTime - accidentTime) / (1000 * 60); // Difference in minutes
+              
+              // Only consider points within 30 minutes of the accident time
+              if (timeDiff > 30) continue;
+
+              const suspectLocation = {
+                lat: parseFloat(locationData.latitude),
+                lng: parseFloat(locationData.longitude)
+              };
+              
+              // Check if the point is within the bounding box
+              if (!isWithinBoundingBox(suspectLocation, boundingBox)) continue;
+
+              const distance = calculateDistance(accidentLocation, suspectLocation);
+              
+              // Only consider points within 1 km of the accident location
+              if (distance > 1) continue;
+
+              suspects.push({
+                userId,
+                vehicleId,
+                time,
+                date,
+                distance,
+                timeDiff,
+                location: suspectLocation,
+                isOnHighway: locationData.isOnHighway || false,
+                timestamp: pointTime.getTime()
+              });
+            }
+          }
+        }
+      }
+
+      // Calculate probability score for each suspect
+      const suspectsWithProbability = suspects.map(suspect => {
+        // Ensure valid distance and timeDiff values
+        const safeDistance = isNaN(suspect.distance) ? 1 : Math.max(0.001, suspect.distance);
+        const safeTimeDiff = isNaN(suspect.timeDiff) ? 30 : Math.max(0.1, suspect.timeDiff);
+        
+        // Normalize distance (0-1 where 1 is closest)
+        const maxDistance = 1; // 1 km
+        const distanceScore = Math.max(0, 1 - (safeDistance / maxDistance));
+        
+        // Normalize time difference (0-1 where 1 is closest in time)
+        const maxTimeDiff = 30; // 30 minutes
+        const timeScore = Math.max(0, 1 - (safeTimeDiff / maxTimeDiff));
+        
+        // Combine scores with weights (70% distance, 30% time)
+        let probability = Math.round((distanceScore * 0.7 + timeScore * 0.3) * 100);
+        
+        // Ensure probability is between 0 and 100
+        probability = Math.max(0, Math.min(100, probability));
+        
+        return {
+          ...suspect,
+          id: `${suspect.userId}-${suspect.vehicleId}`,
+          probability,
+          displayDistance: suspect.distance,
+          displayTimeDiff: suspect.timeDiff
+        };
+      });
+
+      // Group by vehicle and keep only the highest probability entry for each vehicle
+      const vehicleGroups = {};
+      suspectsWithProbability.forEach(suspect => {
+        const vehicleKey = `${suspect.userId}-${suspect.vehicleId}`;
+        if (!vehicleGroups[vehicleKey] || suspect.probability > vehicleGroups[vehicleKey].probability) {
+          vehicleGroups[vehicleKey] = suspect;
+        }
+      });
+
+      // Convert back to array and sort by probability
+      const rankedSuspects = Object.values(vehicleGroups)
+        .sort((a, b) => b.probability - a.probability || a.timeDiff - b.timeDiff)
+        .map((suspect, index) => ({
+          ...suspect,
+          rank: index + 1
+        }));
+
+      return rankedSuspects;
+    } catch (error) {
+      console.error('Error analyzing suspects:', error);
+      return [];
+    } finally {
+      setProcessingSuspects(false);
+    }
+  };
+
   const handleViewCase = async (caseItem) => {
     setSelectedCase(caseItem);
+    setSelectedSuspects([]);
+    setShowSuspectSelection(false);
     try {
       const pathRef = ref(database, 
         `location/${caseItem.userId}/coordinates/${caseItem.vehicleId}/${caseItem.dateOfAccident}`);
@@ -126,9 +308,13 @@ const AdminDashboard = () => {
         data.sort((a, b) => a.time.localeCompare(b.time));
         setPathData(data);
       }
+      
+      const suspects = await analyzeSuspects(caseItem);
+      setSuspects(suspects);
+      
     } catch (err) {
-      console.error('Error fetching path data:', err);
-      setError('Failed to load vehicle path data');
+      console.error('Error fetching case data:', err);
+      setError('Failed to load case details');
     }
     setOpenDialog(true);
   };
@@ -137,6 +323,17 @@ const AdminDashboard = () => {
     setOpenDialog(false);
     setSelectedCase(null);
     setPathData([]);
+    setSuspects([]);
+    setSelectedSuspects([]);
+    setShowSuspectSelection(false);
+  };
+
+  const handleSuspectSelection = (suspectId) => {
+    setSelectedSuspects(prev => 
+      prev.includes(suspectId)
+        ? prev.filter(id => id !== suspectId)
+        : [...prev, suspectId]
+    );
   };
 
   const handleResolveCase = async (status) => {
@@ -146,7 +343,23 @@ const AdminDashboard = () => {
       const caseRef = ref(database, 
         `HitAndRunCaseReport/${selectedCase.userId}/${selectedCase.dateReported}/${selectedCase.id}`);
       
-      await update(caseRef, { status });
+      const updateData = { status };
+      
+      if (status === 'approved' && selectedSuspects.length > 0) {
+        updateData.suspects = suspects
+          .filter(suspect => selectedSuspects.includes(suspect.id))
+          .map(suspect => ({
+            userId: suspect.userId,
+            vehicleId: suspect.vehicleId,
+            time: suspect.time,
+            distance: suspect.distance,
+            probability: suspect.probability,
+            location: suspect.location,
+            isOnHighway: suspect.isOnHighway
+          }));
+      }
+      
+      await update(caseRef, updateData);
       setCases(cases.filter(c => c.id !== selectedCase.id));
       handleCloseDialog();
     } catch (err) {
@@ -156,45 +369,38 @@ const AdminDashboard = () => {
   };
 
   return (
-    <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
-      <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+    <Box className="admin-container">
+      <Paper elevation={3} className="admin-paper">
         {/* Header */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          mb: 4,
-          pb: 2,
-          borderBottom: '1px solid #eee'
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <AdminPanelIcon color="primary" sx={{ fontSize: 40, mr: 2 }} />
-            <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
-              Admin Dashboard
+        <Box className="admin-header">
+          <Box className="admin-title-container">
+            <Badge badgeContent={cases.length} color="primary" overlap="circular">
+              <Avatar className="admin-avatar">
+                <AdminPanelIcon />
+              </Avatar>
+            </Badge>
+            <Typography variant="h4" component="h1" className="admin-title">
+              Case Management Dashboard
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            color="error"
-            startIcon={<LogoutIcon />}
-            onClick={handleLogout}
-            sx={{ textTransform: 'none', borderRadius: 1 }}
-          >
-            Logout
-          </Button>
+          <Tooltip title="Logout">
+            <IconButton className="logout-button" onClick={handleLogout}>
+              <LogoutIcon color="error" />
+            </IconButton>
+          </Tooltip>
         </Box>
         
         {/* User Info */}
-        <Card sx={{ mb: 4, backgroundColor: '#fafafa' }}>
-          <CardContent sx={{ display: 'flex', alignItems: 'center' }}>
-            <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+        <Card className="user-info-card">
+          <CardContent className="user-info-content">
+            <Avatar className="user-avatar">
               {currentUser?.email?.charAt(0).toUpperCase()}
             </Avatar>
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 'medium' }}>
+            <Box className="user-info-text">
+              <Typography variant="h6" className="user-email">
                 {currentUser?.email}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" className="user-role">
                 Administrator
               </Typography>
             </Box>
@@ -202,91 +408,80 @@ const AdminDashboard = () => {
         </Card>
         
         {/* Cases Section */}
-        <Box>
-          <Typography variant="h5" sx={{ mb: 3, fontWeight: 'medium', color: 'text.primary' }}>
-            Pending Cases
+        <Box className="cases-section">
+          <Box className="cases-header">
+            <Typography variant="h5" className="cases-title">
+              <CarIcon className="cases-title-icon" />
+              Pending Hit & Run Cases
+            </Typography>
             <Chip 
               label={`${cases.length} pending`} 
               color="primary" 
-              size="small" 
-              sx={{ ml: 2, fontWeight: 'bold' }}
+              className="cases-count-chip"
             />
-          </Typography>
+          </Box>
           
           {loading ? (
-            <Box display="flex" justifyContent="center" p={4}>
-              <CircularProgress />
+            <Box className="loading-container">
+              <CircularProgress size={60} thickness={4} />
             </Box>
           ) : error ? (
-            <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+            <Alert severity="error" className="error-alert">
+              <Typography fontWeight={600}>{error}</Typography>
+            </Alert>
           ) : cases.length === 0 ? (
-            <Card sx={{ p: 3, textAlign: 'center', backgroundColor: '#fafafa' }}>
-              <Typography variant="body1" color="text.secondary">
+            <Card className="empty-state-card">
+              <Typography variant="body1" className="empty-state-text">
                 No pending cases found
               </Typography>
             </Card>
           ) : (
-            <Grid container spacing={3}>
+            <Grid container spacing={3} className="cases-grid">
               {cases.map((caseItem) => (
-                <Grid item xs={12} md={6} lg={4} key={caseItem.id}>
+                <Grid item xs={12} md={6} lg={4} key={caseItem.id} className="case-grid-item">
                   <Card 
-                    elevation={2} 
-                    sx={{ 
-                      '&:hover': { 
-                        boxShadow: 4,
-                        transform: 'translateY(-2px)',
-                        transition: 'all 0.3s ease'
-                      },
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column'
-                    }}
+                    className="case-card"
+                    onClick={() => handleViewCase(caseItem)}
                   >
                     <CardHeader
                       avatar={
-                        <Avatar sx={{ bgcolor: 'primary.main' }}>
+                        <Avatar className="case-avatar">
                           {caseItem.vehicleId?.charAt(0) || 'C'}
                         </Avatar>
                       }
                       title={`Case #${caseItem.id}`}
                       subheader={`Reported: ${new Date(caseItem.dateAndTimeOfReport).toLocaleString()}`}
+                      className="case-card-header"
                     />
-                    <CardContent sx={{ flexGrow: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <CarIcon color="action" sx={{ mr: 1, fontSize: 20 }} />
-                        <Typography variant="body2">
+                    <CardContent className="case-card-content">
+                      <Box className="case-info-item">
+                        <CarIcon className="case-info-icon" />
+                        <Typography variant="body2" className="case-info-text">
                           {caseItem.vehicleId}
                         </Typography>
                       </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <LocationIcon color="action" sx={{ mr: 1, fontSize: 20 }} />
-                        <Typography variant="body2">
+                      <Box className="case-info-item">
+                        <LocationIcon className="case-info-icon" />
+                        <Typography variant="body2" className="case-info-text">
                           {caseItem.accidentLocation?.latitude?.toFixed(4)}, {caseItem.accidentLocation?.longitude?.toFixed(4)}
                         </Typography>
                       </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <DateIcon color="action" sx={{ mr: 1, fontSize: 20 }} />
-                        <Typography variant="body2">
+                      <Box className="case-info-item">
+                        <DateIcon className="case-info-icon" />
+                        <Typography variant="body2" className="case-info-text">
                           {caseItem.dateOfAccident} at {caseItem.timeOfAccident}
                         </Typography>
                       </Box>
-                      <Typography variant="body2" color="text.secondary" sx={{
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}>
-                        <DescriptionIcon color="action" sx={{ mr: 1, verticalAlign: 'middle', fontSize: 20 }} />
+                      <Typography variant="body2" className="case-description">
+                        <DescriptionIcon className="case-description-icon" />
                         {caseItem.accidentDescription}
                       </Typography>
                     </CardContent>
-                    <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Box className="case-card-actions">
                       <Button 
                         variant="outlined" 
                         size="small"
-                        onClick={() => handleViewCase(caseItem)}
-                        sx={{ textTransform: 'none' }}
+                        className="view-details-button"
                       >
                         View Details
                       </Button>
@@ -303,95 +498,87 @@ const AdminDashboard = () => {
       <Dialog 
         open={openDialog} 
         onClose={handleCloseDialog}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
-        PaperProps={{ 
-          sx: { 
-            height: '90vh',
-            borderRadius: 2
-          } 
-        }}
+        className="case-dialog"
       >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          backgroundColor: 'primary.main',
-          color: 'white',
-          py: 2
-        }}>
-          <Typography variant="h6">
-            Case Details - #{selectedCase?.id}
-          </Typography>
-          <IconButton onClick={handleCloseDialog} sx={{ color: 'white' }}>
+        <DialogTitle className="dialog-title">
+          <Box className="dialog-title-content">
+            <Avatar className="dialog-title-avatar">
+              <CarIcon />
+            </Avatar>
+            <Box className="dialog-title-text">
+              <Typography variant="h6" className="dialog-title-main">
+                Case Investigation #{selectedCase?.id}
+              </Typography>
+              <Typography variant="body2" className="dialog-title-sub">
+                Vehicle {selectedCase?.vehicleId}
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton onClick={handleCloseDialog} className="dialog-close-button">
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers sx={{ p: 0 }}>
+        <DialogContent dividers className="dialog-content">
           {selectedCase && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Box className="dialog-content-container">
               {/* Case Information Section */}
-              <Box sx={{ p: 3, borderBottom: '1px solid #eee' }}>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium', display: 'flex', alignItems: 'center' }}>
-                      <CarIcon sx={{ mr: 1 }} /> Vehicle Information
+              <Box className="case-info-section">
+                <Grid container spacing={3} className="case-info-grid">
+                  <Grid item xs={12} md={6} className="case-info-grid-item">
+                    <Typography variant="subtitle1" className="section-title">
+                      <CarIcon className="section-title-icon" /> Vehicle Information
                     </Typography>
-                    <Box sx={{ pl: 3 }}>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
+                    <Box className="section-content">
+                      <Typography variant="body2" className="info-item">
                         <strong>Vehicle ID:</strong> {selectedCase.vehicleId}
                       </Typography>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
+                      <Typography variant="body2" className="info-item">
                         <strong>Reported by:</strong> User {selectedCase.userId}
                       </Typography>
-                      <Typography variant="body2">
+                      <Typography variant="body2" className="info-item">
                         <strong>Reported on:</strong> {new Date(selectedCase.dateAndTimeOfReport).toLocaleString()}
                       </Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium', display: 'flex', alignItems: 'center' }}>
-                      <LocationIcon sx={{ mr: 1 }} /> Accident Details
+                  <Grid item xs={12} md={6} className="case-info-grid-item">
+                    <Typography variant="subtitle1" className="section-title">
+                      <LocationIcon className="section-title-icon" /> Accident Details
                     </Typography>
-                    <Box sx={{ pl: 3 }}>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
+                    <Box className="section-content">
+                      <Typography variant="body2" className="info-item">
                         <strong>Date:</strong> {selectedCase.dateOfAccident}
                       </Typography>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
+                      <Typography variant="body2" className="info-item">
                         <strong>Time:</strong> {selectedCase.timeOfAccident}
                       </Typography>
-                      <Typography variant="body2">
+                      <Typography variant="body2" className="info-item">
                         <strong>Location:</strong> {selectedCase.accidentLocation.latitude.toFixed(6)}, {selectedCase.accidentLocation.longitude.toFixed(6)}
                       </Typography>
                     </Box>
                   </Grid>
                 </Grid>
                 
-                <Typography variant="subtitle1" sx={{ mt: 3, mb: 2, fontWeight: 'medium', display: 'flex', alignItems: 'center' }}>
-                  <DescriptionIcon sx={{ mr: 1 }} /> Description
+                <Typography variant="subtitle1" className="section-title">
+                  <DescriptionIcon className="section-title-icon" /> Description
                 </Typography>
-                <Paper elevation={0} sx={{ p: 2, backgroundColor: '#fafafa', borderRadius: 1 }}>
-                  <Typography variant="body2">
+                <Paper elevation={0} className="description-paper">
+                  <Typography variant="body2" className="description-text">
                     {selectedCase.accidentDescription}
                   </Typography>
                 </Paper>
               </Box>
 
               {/* Map and Analysis Section */}
-              <Box sx={{ display: 'flex', flexGrow: 1, height: 'calc(100% - 250px)' }}>
+              <Box className="analysis-section">
                 {/* Map Section */}
-                <Box sx={{ 
-                  width: '50%', 
-                  p: 2, 
-                  borderRight: '1px solid #eee',
-                  height: '100%',
-                  overflow: 'hidden'
-                }}>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium' }}>
-                    Accident Location
+                <Box className="map-section">
+                  <Typography variant="subtitle1" className="section-title">
+                    <LocationIcon className="section-title-icon" /> Location Analysis
                   </Typography>
                   {pathData.length > 0 && (
-                    <Box sx={{ height: '100%', borderRadius: 1, overflow: 'hidden' }}>
+                    <Box className="map-container">
                       <OSMMapPicker 
                         initialLocation={{
                           lat: selectedCase.accidentLocation.latitude,
@@ -406,70 +593,123 @@ const AdminDashboard = () => {
                 </Box>
 
                 {/* Suspect Analysis Section */}
-                <Box sx={{ 
-                  width: '50%', 
-                  p: 2,
-                  height: '100%',
-                  overflow: 'auto'
-                }}>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium' }}>
-                    Suspect Analysis
+                <Box className="suspects-section">
+                  <Typography variant="subtitle1" className="section-title">
+                    <WarningIcon className="section-title-icon" /> Suspect Vehicles
                   </Typography>
                   
-                  <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: '#fff8e1' }}>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Note:</strong> The system analyzes vehicles that were in the vicinity during the accident time window.
-                    </Typography>
-                  </Paper>
-                  
-                  {/* Sample Suspect Card - Replace with real data */}
-                  <Card sx={{ mb: 2 }}>
-                    <CardHeader
-                      avatar={<Avatar sx={{ bgcolor: 'warning.main' }}>S1</Avatar>}
-                      title="Vehicle XJ-4587"
-                      subheader="Probability: 78%"
-                    />
-                    <CardContent>
-                      <Typography variant="body2">
-                        This vehicle was within 200m of the accident location at the time of incident.
+                  {processingSuspects ? (
+                    <Box className="suspects-loading">
+                      <CircularProgress size={24} />
+                      <Typography variant="body2" className="loading-text">
+                        Analyzing potential suspects...
                       </Typography>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card sx={{ mb: 2 }}>
-                    <CardHeader
-                      avatar={<Avatar sx={{ bgcolor: 'warning.main' }}>S2</Avatar>}
-                      title="Vehicle KL-3021"
-                      subheader="Probability: 65%"
-                    />
-                    <CardContent>
-                      <Typography variant="body2">
-                        Detected speeding in the area around the time of accident.
-                      </Typography>
-                    </CardContent>
-                  </Card>
+                    </Box>
+                  ) : suspects.length === 0 ? (
+                    <Alert severity="info" className="no-suspects-alert">
+                      No potential suspects found in the vicinity during the incident.
+                    </Alert>
+                  ) : (
+                    <>
+                      <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => setShowSuspectSelection(!showSuspectSelection)}
+                        endIcon={showSuspectSelection ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        className="toggle-suspect-selection"
+                      >
+                        {showSuspectSelection ? 'Hide Selection' : 'Select Suspects'}
+                      </Button>
+
+                      <Collapse in={showSuspectSelection}>
+                        <Box className="suspect-selection-note">
+                          <Typography variant="body2" color="text.secondary">
+                            Select suspects to include in the case report when approving:
+                          </Typography>
+                        </Box>
+                      </Collapse>
+
+                      <List className="suspects-list">
+                        {suspects.map((suspect, index) => (
+                          <ListItem 
+                            key={suspect.id}
+                            className="suspect-item"
+                          >
+                            <Box className="suspect-checkbox-container">
+                              <Checkbox
+                                checked={selectedSuspects.includes(suspect.id)}
+                                onChange={() => handleSuspectSelection(suspect.id)}
+                                color="primary"
+                                className="suspect-checkbox"
+                              />
+                            </Box>
+                            <ListItemAvatar>
+                              <Avatar className="suspect-avatar">S{index + 1}</Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={`Vehicle ${suspect.vehicleId}`}
+                              secondary={
+                                <React.Fragment>
+                                  <Typography
+                                    component="span"
+                                    variant="body2"
+                                    className="suspect-probability"
+                                  >
+                                    <strong>{suspect.probability}% match</strong> - {(suspect.distance * 1000).toFixed(0)} meters away
+                                  </Typography>
+                                  <Box className="suspect-details">
+                                    <Typography variant="body2" className="suspect-detail">
+                                      <strong>Time:</strong> {suspect.time} ({suspect.timeDiff.toFixed(1)} min {suspect.timeDiff > 0 ? 'after' : 'before'})
+                                    </Typography>
+                                    <Typography variant="body2" className="suspect-detail">
+                                      <strong>Location:</strong> {suspect.location.lat.toFixed(4)}, {suspect.location.lng.toFixed(4)}
+                                    </Typography>
+                                    {suspect.isOnHighway && (
+                                      <Chip 
+                                        label="On Highway" 
+                                        size="small" 
+                                        className="highway-chip"
+                                      />
+                                    )}
+                                  </Box>
+                                </React.Fragment>
+                              }
+                              className="suspect-text"
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </>
+                  )}
                 </Box>
               </Box>
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2, borderTop: '1px solid #eee' }}>
+        <DialogActions className="dialog-actions">
           <Button 
             onClick={() => handleResolveCase('rejected')} 
             variant="outlined"
             color="error"
             startIcon={<ClearIcon />}
-            sx={{ mr: 1 }}
+            className="reject-button"
           >
-            Reject
+            Reject Case
           </Button>
           <Button 
             onClick={() => handleResolveCase('approved')} 
             variant="contained"
             color="primary"
             startIcon={<CheckIcon />}
+            className="approve-button"
+            disabled={processingSuspects}
           >
-            Approve
+            Approve Case
+            {selectedSuspects.length > 0 && (
+              <span className="selected-suspects-count">
+                ({selectedSuspects.length} selected)
+              </span>
+            )}
           </Button>
         </DialogActions>
       </Dialog>

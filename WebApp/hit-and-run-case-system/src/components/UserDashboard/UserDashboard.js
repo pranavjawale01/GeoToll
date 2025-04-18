@@ -1,15 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../Auth/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Tabs, Tab, Chip } from '@mui/material';
-import { Logout as LogoutIcon, Add as AddIcon } from '@mui/icons-material';
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableContainer, 
+  TableHead, 
+  TableRow, 
+  Paper, 
+  Tabs, 
+  Tab, 
+  Chip,
+  Collapse,
+  IconButton,
+  Avatar,
+  List,
+  ListItem,
+  ListItemText,
+  Divider
+} from '@mui/material';
+import { 
+  Logout as LogoutIcon, 
+  Add as AddIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  DirectionsCar as CarIcon
+} from '@mui/icons-material';
 import { database } from '../../firebase';
 import { ref, onValue, off } from 'firebase/database';
 import CaseRegistrationModal from './CaseRegistrationModal';
 
 const statusColors = {
   pending: 'warning',
-  completed: 'success',
+  approved: 'success',
   rejected: 'error'
 };
 
@@ -106,7 +133,7 @@ const UserDashboard = () => {
 
       <Box sx={{ mt: 2 }}>
         {activeTab === 0 && <CaseTable cases={pendingCases} loading={loading} />}
-        {activeTab === 1 && <CaseTable cases={completedCases} loading={loading} />}
+        {activeTab === 1 && <CompletedCaseTable cases={completedCases} loading={loading} />}
         {activeTab === 2 && <CaseTable cases={rejectedCases} loading={loading} />}
       </Box>
 
@@ -161,6 +188,121 @@ const CaseTable = ({ cases, loading }) => {
                 />
               </TableCell>
             </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+};
+
+const CompletedCaseTable = ({ cases, loading }) => {
+  const [expandedCase, setExpandedCase] = useState(null);
+
+  if (loading) return <Typography>Loading cases...</Typography>;
+  if (cases.length === 0) return <Typography>No completed cases found</Typography>;
+
+  const toggleExpand = (caseId) => {
+    setExpandedCase(expandedCase === caseId ? null : caseId);
+  };
+
+  return (
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell />
+            <TableCell>Vehicle ID</TableCell>
+            <TableCell>Report Date</TableCell>
+            <TableCell>Accident Date</TableCell>
+            <TableCell>Location</TableCell>
+            <TableCell>Description</TableCell>
+            <TableCell>Status</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {cases.map((caseItem) => (
+            <React.Fragment key={caseItem.id}>
+              <TableRow>
+                <TableCell>
+                  <IconButton
+                    aria-label="expand row"
+                    size="small"
+                    onClick={() => toggleExpand(caseItem.id)}
+                  >
+                    {expandedCase === caseItem.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  </IconButton>
+                </TableCell>
+                <TableCell>{caseItem.vehicleId || 'N/A'}</TableCell>
+                <TableCell>{new Date(caseItem.reportDate).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  {caseItem.dateOfAccident} at {caseItem.timeOfAccident?.substring(0, 5)}
+                </TableCell>
+                <TableCell>
+                  {caseItem.accidentLocation ? (
+                    `${caseItem.accidentLocation.latitude?.toFixed?.(6) || 'N/A'}, 
+                    ${caseItem.accidentLocation.longitude?.toFixed?.(6) || 'N/A'}`
+                  ) : 'N/A'}
+                </TableCell>
+                <TableCell sx={{ maxWidth: 300 }}>
+                  {caseItem.accidentDescription || 'No description'}
+                </TableCell>
+                <TableCell>
+                  <Chip 
+                    label={caseItem.status} 
+                    color={statusColors[caseItem.status] || 'default'}
+                    variant="outlined"
+                  />
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
+                  <Collapse in={expandedCase === caseItem.id} timeout="auto" unmountOnExit>
+                    <Box sx={{ margin: 1 }}>
+                      <Typography variant="h6" gutterBottom component="div">
+                        Suspect Vehicles
+                      </Typography>
+                      {caseItem.suspects?.length > 0 ? (
+                        <List dense>
+                          {caseItem.suspects.map((suspect, index) => (
+                            <React.Fragment key={index}>
+                              <ListItem>
+                                <Avatar sx={{ mr: 2 }}>
+                                  <CarIcon />
+                                </Avatar>
+                                <ListItemText
+                                  primary={`Vehicle ${suspect.vehicleId}`}
+                                  secondary={
+                                    <>
+                                      <Typography component="span" variant="body2" display="block">
+                                        Probability: {suspect.probability}% match
+                                      </Typography>
+                                      <Typography component="span" variant="body2" display="block">
+                                        Distance: {(suspect.distance * 1000).toFixed(0)} meters away
+                                      </Typography>
+                                      <Typography component="span" variant="body2" display="block">
+                                        Time: {suspect.time} ({suspect.timeDiff?.toFixed(1) || '0'} min difference)
+                                      </Typography>
+                                      <Typography component="span" variant="body2" display="block">
+                                        Location: {suspect.location?.lat?.toFixed(6) || 'N/A'}, {suspect.location?.lng?.toFixed(6) || 'N/A'}
+                                      </Typography>
+                                    </>
+                                  }
+                                />
+                              </ListItem>
+                              {index < caseItem.suspects.length - 1 && <Divider />}
+                            </React.Fragment>
+                          ))}
+                        </List>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          No suspects identified for this case
+                        </Typography>
+                      )}
+                    </Box>
+                  </Collapse>
+                </TableCell>
+              </TableRow>
+            </React.Fragment>
           ))}
         </TableBody>
       </Table>

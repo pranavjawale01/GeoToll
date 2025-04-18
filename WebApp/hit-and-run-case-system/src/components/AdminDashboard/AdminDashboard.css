@@ -1,55 +1,521 @@
-/* Add these to your existing CSS */
-.case-dialog {
-  height: 80vh;
+/* Main Container */
+.admin-container {
+  padding: 24px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
 }
 
-.case-dialog-content {
+.admin-paper {
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Header Styles */
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.admin-title-container {
+  display: flex;
+  align-items: center;
+}
+
+.admin-avatar {
+  background-color: #1976d2;
+  color: white;
+  width: 48px;
+  height: 48px;
+  margin-right: 16px;
+}
+
+.admin-title {
+  font-weight: 700;
+  background: linear-gradient(45deg, #1976d2 30%, #2196f3 90%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.logout-button {
+  background-color: rgba(244, 67, 54, 0.1);
+  transition: background-color 0.3s ease;
+}
+
+.logout-button:hover {
+  background-color: rgba(244, 67, 54, 0.2);
+}
+
+/* User Info Card */
+.user-info-card {
+  margin-bottom: 32px;
+  background-color: #fafafa;
+  border-radius: 12px;
+}
+
+.user-info-content {
+  display: flex;
+  align-items: center;
+  padding: 16px !important;
+}
+
+.user-avatar {
+  background-color: #1976d2;
+  color: white;
+  margin-right: 16px;
+  width: 40px;
+  height: 40px;
+}
+
+.user-info-text {
+  flex: 1;
+}
+
+.user-email {
+  font-weight: 500;
+}
+
+.user-role {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* Cases Section */
+.cases-section {
+  margin-top: 32px;
+}
+
+.cases-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.cases-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.cases-title-icon {
+  margin-right: 8px;
+  color: #1976d2;
+}
+
+.cases-count-chip {
+  font-weight: 600;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
+.error-alert {
+  margin-bottom: 24px;
+  border-radius: 8px;
+}
+
+.empty-state-card {
+  padding: 24px;
+  text-align: center;
+  background-color: #fafafa;
+  border-radius: 12px;
+}
+
+.empty-state-text {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* Case Cards */
+.cases-grid {
+  margin-top: 16px;
+}
+
+.case-grid-item {
+  transition: transform 0.3s ease;
+}
+
+.case-card {
+  cursor: pointer;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.case-card:hover {
+  border-color: #1976d2;
+  box-shadow: 0 8px 16px rgba(25, 118, 210, 0.1);
+  transform: translateY(-4px);
+}
+
+.case-card-header {
+  padding-bottom: 0;
+}
+
+.case-avatar {
+  background-color: #1976d2;
+  color: white;
+}
+
+.case-card-content {
+  flex-grow: 1;
+  padding: 16px;
+}
+
+.case-info-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.case-info-icon {
+  margin-right: 8px;
+  color: rgba(0, 0, 0, 0.54);
+  font-size: 20px;
+}
+
+.case-info-text {
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.case-description {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 12px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.case-description-icon {
+  margin-right: 8px;
+  vertical-align: middle;
+  color: rgba(0, 0, 0, 0.54);
+  font-size: 20px;
+}
+
+.case-card-actions {
+  padding: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.view-details-button {
+  text-transform: none;
+  border-radius: 8px;
+}
+
+/* Dialog Styles */
+.case-dialog {
+  border-radius: 16px;
+}
+
+.dialog-title {
+  padding: 0;
+  background-color: #1976d2;
+  color: white;
+}
+
+.dialog-title-content {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  padding-right: 8px;
+}
+
+.dialog-title-avatar {
+  background-color: white;
+  color: #1976d2;
+  margin-right: 16px;
+  width: 40px;
+  height: 40px;
+}
+
+.dialog-title-main {
+  font-weight: 600;
+}
+
+.dialog-title-sub {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dialog-close-button {
+  color: white;
+}
+
+.dialog-content {
+  padding: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-.case-info-section {
-  flex: 1;
-  padding: 16px;
-  border-bottom: 1px solid #eee;
-}
-
-.map-suspects-section {
+.dialog-content-container {
   display: flex;
-  flex: 2;
-  height: 60%;
+  flex-direction: column;
+  height: 100%;
 }
 
-.map-section, .suspects-section {
-  padding: 8px;
-  height: 100%;
+/* Case Info Section */
+.case-info-section {
+  padding: 24px;
+  background-color: rgba(25, 118, 210, 0.03);
+}
+
+.case-info-grid {
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.section-title-icon {
+  margin-right: 8px;
+  color: #1976d2;
+}
+
+.section-content {
+  padding-left: 24px;
+}
+
+.info-item {
+  margin-bottom: 8px;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.description-paper {
+  padding: 16px;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.description-text {
+  color: rgba(0, 0, 0, 0.87);
+  white-space: pre-wrap;
+}
+
+/* Analysis Section */
+.analysis-section {
+  display: flex;
+  flex-grow: 1;
+  height: calc(100% - 250px);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .map-section {
-  border-right: 1px solid #eee;
-}
-
-.suspects-list {
-  max-height: 100%;
-  overflow-y: auto;
-}
-
-/* Ensure the dialog content takes full height */
-.dialog-content {
-  display: flex;
-  flex-direction: column;
+  width: 50%;
+  padding: 16px;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
   height: 100%;
+  overflow: hidden;
 }
 
-/* Map container should not overflow */
 .map-container {
   height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   position: relative;
 }
 
-/* Add some scrollable areas where needed */
-.scrollable-content {
-  overflow-y: auto;
+.suspects-section {
+  width: 50%;
+  padding: 16px;
   height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.suspects-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
+.loading-text {
+  margin-top: 16px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.no-suspects-alert {
+  margin-bottom: 24px;
+  border-radius: 8px;
+}
+
+.suspects-list {
+  width: 100%;
+}
+
+.suspect-item {
+  background-color: white;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 12px 16px;
+}
+
+.suspect-avatar {
+  background-color: #ff9800;
+  color: white;
+}
+
+.suspect-probability {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.suspect-details {
+  margin-top: 8px;
+}
+
+.suspect-detail {
+  display: block;
+  margin-bottom: 4px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.highway-chip {
+  margin-top: 8px;
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+/* Dialog Actions */
+.dialog-actions {
+  padding: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.reject-button {
+  border-radius: 8px;
+  padding: 8px 24px;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.approve-button {
+  border-radius: 8px;
+  padding: 8px 24px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.approve-button:hover {
+  box-shadow: none;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 960px) {
+  .analysis-section {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .map-section,
+  .suspects-section {
+    width: 100%;
+    height: 400px;
+  }
+  
+  .map-section {
+    border-right: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-container {
+    padding: 16px;
+  }
+  
+  .admin-paper {
+    padding: 16px;
+  }
+  
+  .case-info-grid {
+    flex-direction: column;
+  }
+  
+  .case-info-grid-item {
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  
+  .case-grid-item {
+    width: 100%;
+  }
+
+  /* Add these new styles for suspect selection */
+.toggle-suspect-selection {
+  margin-bottom: 16px;
+  text-transform: none;
+  color: #1976d2;
+  font-weight: 500;
+}
+
+.suspect-selection-note {
+  margin-bottom: 16px;
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.suspect-checkbox-container {
+  margin-right: 8px;
+}
+
+.suspect-checkbox {
+  padding: 8px;
+}
+
+.selected-suspects-count {
+  margin-left: 8px;
+  font-size: 0.875rem;
+}
+
+.suspect-item {
+  background-color: white;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+}
+
+.suspect-item.selected {
+  background-color: #e3f2fd;
+  border-left: 4px solid #1976d2;
+}
+
+  @media (max-width: 960px) {
+    .suspect-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .suspect-checkbox-container {
+      margin-bottom: 8px;
+    }
+  }
 }
