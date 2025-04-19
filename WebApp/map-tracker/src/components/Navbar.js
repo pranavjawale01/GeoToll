@@ -19,9 +19,10 @@ import MenuIcon from "@mui/icons-material/Menu";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import GavelIcon from "@mui/icons-material/Gavel";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import AndroidIcon from "@mui/icons-material/Android"; // ✅ Android Icon
 
 import { getDatabase, ref, update } from "firebase/database";
-import { useAuth } from "../context/AuthContext"; // Ensure correct context path
+import { useAuth } from "../context/AuthContext";
 
 const drawerWidthExpanded = 220;
 const drawerWidthCollapsed = 60;
@@ -57,7 +58,7 @@ const Navbar = () => {
     },
     {
       text: "Penalties",
-      icon: <GavelIcon />, 
+      icon: <GavelIcon />,
       onClick: () => navigate("/penalties"),
     },
     {
@@ -69,7 +70,7 @@ const Navbar = () => {
       text: "Logout",
       icon: <LogoutIcon />,
       onClick: handleLogoutClick,
-    },        
+    },
   ];
 
   return (
@@ -94,7 +95,6 @@ const Navbar = () => {
           </IconButton>
 
           <Box
-            noWrap
             component="img"
             src={"icon.png"}
             alt="Project Icon"
@@ -117,6 +117,19 @@ const Navbar = () => {
           />
 
           <Box sx={{ flexGrow: 1 }} />
+
+          {/* ✅ Download App Button */}
+          <Button
+            color="inherit"
+            href="https://github.com/pranavjawale01/GeoToll/raw/refs/heads/android/Location%20Tracker%20App.apk"
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ mr: 2 }}
+          >
+            <AndroidIcon sx={{ mr: 1 }} />
+            Download App
+          </Button>
+
           <Button color="inherit" onClick={handleProfileClick}>
             <AccountCircleIcon sx={{ mr: 1 }} />
             Profile
