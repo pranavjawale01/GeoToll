@@ -300,23 +300,32 @@ const Dashboard = () => {
                   height: 145,
                 }}
               >
-                <h4 className="blinking">
-                  Today's total Toll = Rs.{todayTotalCost.toFixed(2)}
-                </h4>
                 <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    width: "100%",
-                  }}
+                style={{
+                  display: "flex",
+                  flexDirection: "column", // Stack vertically
+                  alignItems: "center", // Center horizontally
+                  gap: "10px", // Optional spacing between buttons
+                  width: "100%",
+                  paddingTop: "20px"  
+                }}
+              >
+                <button
+                  className="button-impressive"
+                  style={{ width: "200px" }}
+                  onClick={() => navigate("/toll-history")}
                 >
-                  <button
-                    className="button-impressive"
-                    style={{ width: "200px" }}
-                  >
-                    Pay
-                  </button>
-                </div>
+                  Pay Toll
+                </button>
+                <button
+                  className="button-impressive"
+                  style={{ width: "200px" }}
+                  onClick={() => navigate("/penalties")}
+                >
+                  Pay Penalties
+                </button>
+              </div>
+
               </Box>
             </Box>
           </Box>
