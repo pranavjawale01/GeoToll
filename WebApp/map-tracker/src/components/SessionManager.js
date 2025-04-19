@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { ref, set, onValue, remove, onDisconnect } from "firebase/database";
 import { auth, database } from "../firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 

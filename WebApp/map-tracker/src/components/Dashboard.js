@@ -228,7 +228,7 @@ const Dashboard = () => {
                       },
                     }}
                   >
-                    <UserMap locations={locations} />
+                    <UserMap locations={locations} userId={userId} />
                   </Box>
                 </Box>
               )}

@@ -3,8 +3,10 @@ import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "leaflet-arrowheads";
+import UserBoundingBox from "./UserBoundingBox";
 
-const UserMap = ({ locations }) => {
+
+const UserMap = ({ locations, userId }) => {
   // Set the start and end locations for the route
   const startLocation = locations[0];
   const endLocation = locations[locations.length - 1];
@@ -127,6 +129,8 @@ const UserMap = ({ locations }) => {
 
       {/* Draw polylines with arrows */}
       <AddArrows segments={polylineSegments} />
+      <UserBoundingBox userId={userId} />
+
     </MapContainer>
   );
 };
