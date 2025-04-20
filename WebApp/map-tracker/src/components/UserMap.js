@@ -1,15 +1,26 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "leaflet-arrowheads";
+import UserBoundingBox from "./UserBoundingBox";
 
-const UserMap = ({ locations }) => {
-  if (!locations || locations.length === 0) return null;
 
+const UserMap = ({ locations, userId }) => {
   // Set the start and end locations for the route
   const startLocation = locations[0];
   const endLocation = locations[locations.length - 1];
+
+  const startMarker = useMemo(
+    () => [startLocation.latitude, startLocation.longitude],
+    [startLocation]
+  );
+
+  const endMarker = useMemo(
+    () => [endLocation.latitude, endLocation.longitude],
+    [endLocation]
+  );
+  if (!locations || locations.length === 0) return null;
 
   // Function to split locations into segments based on highway status
   const getPolylineSegments = () => {
@@ -52,10 +63,31 @@ const UserMap = ({ locations }) => {
   const AddArrows = ({ segments }) => {
     const map = useMap();
 
+    // Fit bounds to all locations on map load
+    useEffect(() => {
+      if (locations.length > 1) {
+        const bounds = L.latLngBounds(
+          locations.map((loc) => [loc.latitude, loc.longitude])
+        );
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
+    }, [map]);
+
     useEffect(() => {
       segments.forEach((segment) => {
+        // Determine color based on the isOnHighway value
+        let color;
+        if (segment.isOnHighway === 1 || segment.isOnHighway === true) {
+          color = "blue"; // Highway
+        } else if (segment.isOnHighway === 0 || segment.isOnHighway === false) {
+          color = "red"; // Service road or alternate route
+        } else if (segment.isOnHighway === 2) {
+          color = "yellow"; // New condition for isOnHighway === 2
+        }
+
+        // Create polyline with the selected color
         const polyline = L.polyline(segment.positions, {
-          color: segment.isOnHighway ? "blue" : "red", // Highway or service road
+          color: color,
         }).addTo(map);
 
         // Add arrowheads to the polyline
@@ -63,14 +95,14 @@ const UserMap = ({ locations }) => {
           frequency: "200px", // distance between arrows
           size: "8px", // arrow size
           fill: true,
-          color: segment.isOnHighway ? "blue" : "red",
+          color: color,
         });
       });
 
       return () => {
         // Clear the map when the component unmounts or updates
         map.eachLayer((layer) => {
-          if (layer instanceof L.Polyline) {
+          if (layer instanceof L.Polyline && !layer._latlng) {
             map.removeLayer(layer);
           }
         });
@@ -92,11 +124,13 @@ const UserMap = ({ locations }) => {
       />
 
       {/* Start and end markers */}
-      <Marker position={[startLocation.latitude, startLocation.longitude]} />
-      <Marker position={[endLocation.latitude, endLocation.longitude]} />
+      <Marker position={startMarker} />
+      <Marker position={endMarker} />
 
       {/* Draw polylines with arrows */}
       <AddArrows segments={polylineSegments} />
+      <UserBoundingBox userId={userId} />
+
     </MapContainer>
   );
 };

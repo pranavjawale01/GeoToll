@@ -1,40 +1,58 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { auth } from "../firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
+import { getDatabase, ref, remove } from "firebase/database";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [userId, setUserId] = useState(null); // State to store the currently authenticated user's ID
+  const [userId, setUserId] = useState(null);
 
-  // useEffect hook to monitor authentication state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserId(user.uid);
       } else {
         setUserId(null);
+        sessionStorage.removeItem("sessionId");
       }
     });
 
-    // Cleanup function to unsubscribe from auth state changes
     return () => unsubscribe();
   }, []);
 
-  // Logout function to clear userId
+  const login = async (email, password) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
-      await signOut(auth); // Call Firebase signOut method
-      setUserId(null); // Clear the userId in context
+      const sessionId = sessionStorage.getItem("sessionId");
+      if (sessionId) {
+        // Cleanup session in Firebase
+        const db = getDatabase();
+        const sessionRef = ref(db, `activeSessions/${auth.currentUser.uid}/${sessionId}`);
+        await remove(sessionRef); // <-- Remove session from Firebase
+        sessionStorage.removeItem("sessionId"); // Clean up session storage
+      }
+      
+      await signOut(auth);
+      setUserId(null); // Ensure userId is reset
     } catch (error) {
       console.error("Error logging out: ", error);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ userId, logout }}>
-      {" "}
-      {/* Add logout to the context */}
+    <AuthContext.Provider value={{ userId, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

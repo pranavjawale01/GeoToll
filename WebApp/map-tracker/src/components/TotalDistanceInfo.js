@@ -2,14 +2,17 @@ import { useState, useEffect } from "react";
 import { ref, onValue } from "firebase/database";
 import { database } from "../firebase"; // Import your Firebase config
 
-const TotalDistanceInfo = ({ userId }) => {
+const TotalDistanceInfo = ({ userId, selectedVehicle }) => {
   const [totalDistance, setTotalDistance] = useState(0);
   const [totalHighwayDistance, setTotalHighwayDistance] = useState(0);
 
   useEffect(() => {
     if (userId) {
       // Reference to the coordinates for the user
-      const totalDistanceRef = ref(database, `location/${userId}`);
+      const totalDistanceRef = ref(
+        database,
+        `location/${userId}/coordinates/${selectedVehicle}`
+      );
 
       // Listen for changes in the database
       onValue(totalDistanceRef, (snapshot) => {
@@ -19,8 +22,8 @@ const TotalDistanceInfo = ({ userId }) => {
 
           if (data) {
             // Directly access totalDistance and totalHighwayDistance
-            const totalDistance = data.totalDistance || 0;
-            const totalHighwayDistance = data.totalHighwayDistance || 0;
+            const totalDistance = data.totalDistance / 1000 || 0;
+            const totalHighwayDistance = data.totalHighwayDistance / 1000 || 0;
 
             // Update the state with the fetched values
             setTotalDistance(totalDistance);
@@ -33,13 +36,17 @@ const TotalDistanceInfo = ({ userId }) => {
         }
       });
     }
-  }, [userId]);
+  }, [userId, selectedVehicle]);
 
   return (
     <div>
-      <h3>Total Distance Information</h3>
-      <p>Total Distance: {totalDistance.toFixed(2)} meters</p>
-      <p>Total Highway Distance: {totalHighwayDistance.toFixed(2)} meters</p>
+      <h4 style={{ marginBottom: "5px" }}>Total Distance Information</h4>
+      <p style={{ margin: "2px 0" }}>
+        Total Distance: {totalDistance.toFixed(2)} Km
+      </p>
+      <p style={{ margin: "2px 0" }}>
+        Total Highway Distance: {totalHighwayDistance.toFixed(2)} Km
+      </p>
     </div>
   );
 };
