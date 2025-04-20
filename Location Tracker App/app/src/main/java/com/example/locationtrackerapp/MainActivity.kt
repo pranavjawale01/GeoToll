@@ -1,23 +1,29 @@
 package com.example.locationtrackerapp
 
 import android.Manifest
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationManager
 import android.os.Bundle
+import android.os.Handler
 import android.os.Looper
-import android.os.Looper.*
+import android.util.Log
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.Spinner
 import android.widget.TextView
+import android.widget.Toast
 import android.widget.ToggleButton
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import androidx.work.Data
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import com.example.locationtrackerapp.HelperFunctions.DailyResetWorker
 import com.example.locationtrackerapp.HelperFunctions.DistanceCalculator
 import com.example.locationtrackerapp.HelperFunctions.FirebaseHelper
 import com.example.locationtrackerapp.HelperFunctions.SpeedCalculator
@@ -26,7 +32,7 @@ import com.google.android.gms.location.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import java.util.Calendar
-import java.util.concurrent.TimeUnit
+import kotlin.text.*
 
 class MainActivity : ComponentActivity() {
 
@@ -45,6 +51,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var todayTotalHighwayDistanceTextView: TextView
     private lateinit var totalDistanceKmTextView: TextView
     private lateinit var totalHighwayDistanceKmTextView: TextView
+    private lateinit var vehicleSpinner: Spinner
 
     private var user: FirebaseUser? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -53,21 +60,17 @@ class MainActivity : ComponentActivity() {
     private var totalDistanceKm = 0.0
     private var isTracking = false
     private val REQUEST_CHECK_SETTINGS = 1001
+    private var currentVehicleId: String? = null
+    private var previousVehicleId: String? = null
 
     // Companion object to store the previous location, accessible by other classes
-    public companion object {
+    companion object {
         var previousLocation: Location? = null
         var todayTotalDistance: Double = 0.0
         var todayTotalHighwayDistance: Double = 0.0
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        auth = FirebaseAuth.getInstance()
-
-        // Initialize UI elements
+    private fun initUI() {
         logoutButton = findViewById(R.id.logout)
         nameTextView = findViewById(R.id.name_text_view)
         emailTextView = findViewById(R.id.user_details)
@@ -82,6 +85,40 @@ class MainActivity : ComponentActivity() {
         todayTotalHighwayDistanceTextView = findViewById(R.id.today_total_highway_distance_text_view)
         totalDistanceKmTextView = findViewById(R.id.total_distance_km_text_view)
         totalHighwayDistanceKmTextView = findViewById(R.id.total_highway_distance_km_text_view)
+        vehicleSpinner = findViewById(R.id.vehicle_spinner)
+    }
+
+    // GPS IS ENABLED BUT NOT WORKING
+    fun isGpsWorking(): Boolean {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+    }
+
+    fun isGpsAvailable(): Boolean {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.allProviders.contains(LocationManager.GPS_PROVIDER)
+    }
+
+    fun sendGpsNotWorkingNotification() {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notification = NotificationCompat.Builder(this, "GPS_STATUS_CHANNEL")
+            .setSmallIcon(R.drawable.ic_warning)
+            .setContentTitle("GPS Issue")
+            .setContentText("GPS is available but not working properly. Please check your GPS settings.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+
+        notificationManager.notify(1, notification)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        auth = FirebaseAuth.getInstance()
+
+        // Initialize UI elements
+        initUI()
 
         // Get current user information
         user = auth.currentUser
@@ -90,30 +127,86 @@ class MainActivity : ComponentActivity() {
         } else {
             emailTextView.text = user!!.email
 
+            // Fetch vehicles only if user ID is not null or blank
+            val userId = user?.uid
+
+            if (userId != null) {
+                FirebaseHelper.getTheBoundingBoxData(userId, "6dc7fb95a3b246cfa0f3bcef5ce9ed9a")
+            } else {
+                Log.e("FirebaseHelper", "User ID is null. User might not be logged in.")
+            }
+
+            if (!userId.isNullOrBlank()) {
+                fun fetchAndPopulateVehicles() {
+                    FirebaseHelper.fetchVehiclesFromFirebase { vehicleList ->
+                        val filteredVehicleList = vehicleList.filter { !it.isNullOrBlank() && it != "null" }
+
+                        if (filteredVehicleList.isNotEmpty()) {
+                            val adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, filteredVehicleList)
+                            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                            vehicleSpinner.adapter = adapter
+                        } else {
+                            println("Vehicle list is empty after filtering, disabling UI")
+                            disableUI()
+                        }
+                    }
+                }
+
+                fetchAndPopulateVehicles()
+
+                vehicleSpinner.setOnTouchListener { _, _ ->
+                    fetchAndPopulateVehicles()
+                    false // Allow the touch event to propagate
+                }
+            } else {
+                println("User ID is null or blank, cannot fetch vehicles")
+            }
+
+
+            // Handle vehicle selection safely
+            vehicleSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    if (position > 0) { // Ensure user selects a valid vehicle
+                        val newVehicleId = parent?.getItemAtPosition(position)?.toString()
+
+                        if (!newVehicleId.isNullOrBlank() && newVehicleId != previousVehicleId) {
+                            user?.uid?.takeIf { it.isNotBlank() }?.let { userId ->
+                                previousVehicleId?.let { FirebaseHelper.setVehicleInactive(userId, it) }
+                                FirebaseHelper.setVehicleActive(userId, newVehicleId, true)
+
+                                currentVehicleId = newVehicleId
+                                previousVehicleId = newVehicleId
+
+                                enableUI()
+                            } ?: println("User ID is null or blank, cannot set vehicle active")
+                        }
+                    } else {
+                        stopLocationUpdates()
+                        disableUI()
+                    }
+                }
+
+                override fun onNothingSelected(parent: AdapterView<*>?) {
+                    previousVehicleId?.let {
+                        FirebaseHelper.setVehicleInactive(user!!.uid, it)
+                    }
+                    currentVehicleId?.let {
+                        FirebaseHelper.setVehicleInactive(user!!.uid, it)
+                    }
+                    currentVehicleId = null
+                    previousVehicleId = null
+                    stopLocationUpdates()
+                    disableUI() // Keep UI disabled if nothing is selected
+                }
+            }
+
             // Fetch and display user's name from Firebase
             FirebaseHelper.fetchUserName(user!!.uid) { name ->
                 nameTextView.text = name ?: "Name not found"
             }
 
-            FirebaseHelper.getTotalDistance(user!!.uid) { distance ->
-                totalDistanceKm = distance ?: 0.0
-                totalDistanceKmTextView.text = String.format("Total Distance: %.2f km", totalDistanceKm / 1000.0)
-            }
-
-            FirebaseHelper.getTotalHighwayDistance(user!!.uid) { distance ->
-                totalHighwayDistanceKm = distance ?: 0.0
-                totalHighwayDistanceKmTextView.text = String.format("Total Highway Distance: %.2f km", totalHighwayDistanceKm / 1000.0)
-            }
-
-            FirebaseHelper.getTodayTotalDistance(user!!.uid) { distance ->
-                todayTotalDistance = distance ?: 0.0
-                todayTotalDistanceTextView.text = String.format("Today's Total Distance: %.2f m", todayTotalDistance)
-            }
-
-            FirebaseHelper.getTodayTotalHighwayDistance(user!!.uid) { distance ->
-                todayTotalHighwayDistance = distance ?: 0.0
-                todayTotalHighwayDistanceTextView.text = String.format("Today's Total Highway Distance: %.2f m", todayTotalHighwayDistance)
-            }
+            // Intitalize the views with data
+            // getVehicleData(user!!.uid, currentVehicleId!!)
         }
 
         // Initialize FusedLocationProviderClient
@@ -122,7 +215,7 @@ class MainActivity : ComponentActivity() {
         // Set up location callback
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
-                locationResult.locations?.forEach { location ->
+                locationResult.locations.forEach { location ->
                     updateLocation(location)
                 }
             }
@@ -132,31 +225,67 @@ class MainActivity : ComponentActivity() {
         toggleButton.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 requestLocationPermission()
+                user?.uid?.let { userId ->
+                    currentVehicleId?.let { vehicleId ->
+                        getVehicleData(userId, vehicleId)
+                        if (isGpsAvailable() && !isGpsWorking()) {
+                            userId?.let { FirebaseHelper.sendGpsStatusToFirebase(userId, false) }
+                            println("GPS is available but not working, reported to Firebase")
+                            sendGpsNotWorkingNotification()
+                        }
+                    }
+                }
             } else {
                 stopLocationUpdates()
-                user?.let {
-                    FirebaseHelper.saveTotalDistance(it.uid, totalDistanceKm)
-                    FirebaseHelper.saveTotalHighwayDistance(it.uid, totalHighwayDistanceKm)
-                    FirebaseHelper.saveTodayTotalDistance(it.uid, todayTotalDistance)
-                    FirebaseHelper.saveTodayTotalHighwayDistance(it.uid, todayTotalHighwayDistance)
+                user?.uid?.let { userId ->
+                    currentVehicleId?.let { vehicleId ->
+                        saveVehicleData(userId, vehicleId)
+                        previousLocation = null
+                    }
                 }
+                /*
+                user?.let {
+                    currentVehicleId?.let { vehicleId -> FirebaseHelper.setVehicleInactive(user!!.uid, vehicleId) }
+                    currentVehicleId = null
+                }
+                */
+
+                /*
+                user?.let {
+                    previousVehicleId?.let { vehicleId -> FirebaseHelper.setVehicleInactive(user!!.uid, vehicleId) }
+                    currentVehicleId?.let { vehicleId -> FirebaseHelper.setVehicleInactive(user!!.uid, vehicleId) }
+
+                    currentVehicleId = null
+                    previousVehicleId = null
+                }
+                */
             }
         }
 
         // Logout button listener
         logoutButton.setOnClickListener {
-            user?.let {
-                FirebaseHelper.saveTotalDistance(it.uid, totalDistanceKm)
-                FirebaseHelper.saveTotalHighwayDistance(it.uid, totalHighwayDistanceKm)
-                FirebaseHelper.saveTodayTotalDistance(it.uid, todayTotalDistance)
-                FirebaseHelper.saveTodayTotalHighwayDistance(it.uid, todayTotalHighwayDistance)
+            user?.uid?.let { userId ->
+                currentVehicleId?.let { vehicleId ->
+                    saveVehicleData(userId, vehicleId)
+                }
             }
+            user?.uid?.let { userId ->
+                previousVehicleId?.let { vehicleId -> FirebaseHelper.setVehicleInactive(userId, vehicleId) }
+                currentVehicleId?.let { vehicleId -> FirebaseHelper.setVehicleInactive(userId, vehicleId) }
+
+                currentVehicleId = null
+                previousVehicleId = null
+
+                // Save vehicle data before logging out
+                currentVehicleId?.let { vehicleId -> saveVehicleData(userId, vehicleId) }
+            }
+
             auth.signOut()
             navigateToLogin()
         }
 
         // Schedule the daily reset of distances at midnight
-        scheduleDailyResetWorker()
+        startDailyResetScheduler()
     }
 
     private fun updateLocation(location: Location) {
@@ -166,6 +295,7 @@ class MainActivity : ComponentActivity() {
             val distance = DistanceCalculator.haversine(previous.latitude, previous.longitude, location.latitude, location.longitude)
             todayTotalDistance += distance.toDouble()
             totalDistanceKm += distance.toDouble()
+
             // Update today's total distance
             todayTotalDistanceTextView.text = String.format("Today's Total Distance: %.2f m", todayTotalDistance)
             totalDistanceKmTextView.text = String.format("Total Distance: %.2f km", totalDistanceKm / 1000.0)
@@ -173,21 +303,44 @@ class MainActivity : ComponentActivity() {
             val speed = SpeedCalculator.calculateSpeed(previous, location)
             speedTextView.text = String.format("Speed: %.2f km/h", speed)
 
+            var speedLimit = 80 // Initialize with a default value
+
+            HighwayCheckerOSM.speedProviderForRoads(HighwayCheckerOSM.Coordinates(location.latitude, location.longitude)) { speedTemp ->
+                speedLimit = speedTemp
+                println("Speed limit updated: $speedLimit km/h")
+            }
+
+            if (speed > speedLimit) {
+                if (currentVehicleId != null) {
+                    FirebaseHelper.saveOverSpeedPenalty(user!!.uid, location, speed, speedLimit, currentVehicleId!!)
+                } else {
+                    Log.e("MainActivity", "Error: currentVehicleId is null, cannot save penalty!")
+                }
+            }
+
             val timeInterval = (location.time - previous.time) / 1000.0
             currentDistanceTimeTextView.text = String.format("Current Distance: %.2f m, Time Interval: %.2f s", distance, timeInterval)
+
+            // Save the location and highway status
+            val isInsideBoundingBox = BoundingBoxChecker.isCoordinateInsideResidentialAddressBoundingBoxOrPermanentAddressBoundingBox(location.latitude, location.longitude)
+            println("Is inside bounding box? $isInsideBoundingBox")
 
             // Check if user is on a highway
             HighwayCheckerOSM.isHighway(HighwayCheckerOSM.Coordinates(location.latitude, location.longitude)) { result, highwayName ->
                 runOnUiThread {
                     val isOnHighway = when (result) {
                         5 -> {
-                            highwayTextView.text = "\nYou are on a highway!"
-                            todayTotalHighwayDistance += distance.toDouble()
-                            totalHighwayDistanceKm += distance.toDouble()
+                            if (isInsideBoundingBox) {
+                                highwayTextView.text = "\nYou are on a highway But Inside Your Bounding Box!"
+                            } else {
+                                highwayTextView.text = "\nYou are on a highway!"
+                                todayTotalHighwayDistance += distance.toDouble()
+                                totalHighwayDistanceKm += distance.toDouble()
+                            }
 
                             // Update today's total highway distance
-                            todayTotalHighwayDistanceTextView.text = String.format("Today's Total Highway Distance: %.2f m", todayTotalHighwayDistance)
-                            totalHighwayDistanceKmTextView.text = String.format("Total Highway Distance: %.2f km", totalHighwayDistanceKm / 1000.0)
+                            todayTotalHighwayDistanceTextView.text = String.format("Today's Total Highway Distance\n -- %.2f m --", todayTotalHighwayDistance)
+                            totalHighwayDistanceKmTextView.text = String.format("Total Highway Distance\n -- %.2f km --", totalHighwayDistanceKm / 1000.0)
                             true
                         }
                         4 -> {
@@ -223,9 +376,10 @@ class MainActivity : ComponentActivity() {
 
                     highwayNameTextView.text = highwayName ?: "Road name not available"
 
-                    // Save the location and highway status
                     user?.let {
-                        FirebaseHelper.saveLocation(it.uid, location.latitude, location.longitude, isOnHighway)
+                        currentVehicleId?.let { vehicleId ->
+                            FirebaseHelper.saveLocation(it.uid, vehicleId, location.latitude, location.longitude, isOnHighway, isInsideBoundingBox)
+                        }
                     }
                 }
             }
@@ -247,7 +401,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Updated startLocationUpdates function to handle permission properly
     private fun startLocationUpdates() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("MainActivity", "Location permission not granted")
+            return
+        }
+
         val locationRequest = LocationRequest.create().apply {
             interval = 10000
             fastestInterval = 5000
@@ -259,7 +419,8 @@ class MainActivity : ComponentActivity() {
         val task = client.checkLocationSettings(builder.build())
 
         task.addOnSuccessListener {
-            startLocationUpdates(locationRequest)
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+            isTracking = true
         }
 
         task.addOnFailureListener { exception ->
@@ -267,13 +428,36 @@ class MainActivity : ComponentActivity() {
                 try {
                     exception.startResolutionForResult(this, REQUEST_CHECK_SETTINGS)
                 } catch (sendEx: IntentSender.SendIntentException) {
-                    // Handle error
+                    Log.e("MainActivity", "Error starting resolution for location settings", sendEx)
                 }
+            }
+        }
+
+        user?.uid?.let { userId ->
+            currentVehicleId?.let { vehicleId ->
+                getVehicleData(userId, vehicleId)
             }
         }
     }
 
     private fun startLocationUpdates(locationRequest: LocationRequest) {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
         isTracking = true
     }
@@ -286,30 +470,203 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun scheduleDailyResetWorker() {
-        // Set the trigger to fire at 11:59 PM
-        val calendar = Calendar.getInstance().apply {
-            timeInMillis = System.currentTimeMillis()
-            set(Calendar.HOUR_OF_DAY, 23)
-            set(Calendar.MINUTE, 59)
-            set(Calendar.SECOND, 50)
+
+    override fun onStop() {
+        super.onStop()
+        if (isTracking) {
+            user?.uid?.let { userId ->
+                currentVehicleId?.let { vehicleId ->
+                    saveVehicleData(userId, vehicleId)
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
+                previousVehicleId?.let { vehicleId ->
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
+            }
+        } else {
+            user?.uid?.let { userId ->
+                currentVehicleId?.let { vehicleId ->
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
+                previousVehicleId?.let { vehicleId ->
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isTracking) {
+            user?.uid?.let { userId ->
+                currentVehicleId?.let { vehicleId ->
+                    saveVehicleData(userId, vehicleId)
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
+                previousVehicleId?.let { vehicleId ->
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
+            }
+        } else {
+            user?.uid?.let { userId ->
+                currentVehicleId?.let { vehicleId ->
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
+                previousVehicleId?.let { vehicleId ->
+                    FirebaseHelper.setVehicleInactive(userId, vehicleId)
+                }
+            }
+        }
+        dailyResetHandler.removeCallbacks(dailyResetRunnable)
+    }
+
+
+    private fun getVehicleData(userId: String, vehicleId: String) {
+        FirebaseHelper.getTotalDistance(userId, vehicleId) { distance ->
+            totalDistanceKm = distance ?: 0.0
+            totalDistanceKmTextView.text = String.format("Total Distance: %.2f km", totalDistanceKm / 1000.0)
         }
 
-        val currentTime = System.currentTimeMillis()
-        val initialDelay = calendar.timeInMillis - currentTime
+        FirebaseHelper.getTotalHighwayDistance(userId, vehicleId) { distance ->
+            totalHighwayDistanceKm = distance ?: 0.0
+            totalHighwayDistanceKmTextView.text = String.format("Total Highway Distance: %.2f km", totalHighwayDistanceKm / 1000.0)
+        }
 
-        // Create Data object to pass today's distance values
-        val dailyData = Data.Builder()
-            .putDouble("todayTotalDistance", todayTotalDistance)
-            .putDouble("todayTotalHighwayDistance", todayTotalHighwayDistance)
-            .build()
+        FirebaseHelper.getTodayTotalDistance(userId, vehicleId) { distance ->
+            todayTotalDistance = distance ?: 0.0
+            todayTotalDistanceTextView.text = String.format("Today's Total Distance: %.2f m", todayTotalDistance)
+        }
 
-        // Schedule the daily reset worker with input data
-        val dailyWorkRequest = OneTimeWorkRequestBuilder<DailyResetWorker>()
-            .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
-            .setInputData(dailyData)
-            .build()
+        FirebaseHelper.getTodayTotalHighwayDistance(userId, vehicleId) { distance ->
+            todayTotalHighwayDistance = distance ?: 0.0
+            todayTotalHighwayDistanceTextView.text = String.format("Today's Total Highway Distance: %.2f m", todayTotalHighwayDistance)
+        }
+    }
 
-        WorkManager.getInstance(this).enqueue(dailyWorkRequest)
+
+    private fun saveVehicleData(userId: String, vehicleId: String) {
+        FirebaseHelper.saveTodayTotalHighwayDistance(userId, vehicleId, todayTotalHighwayDistance)
+        FirebaseHelper.saveTodayTotalDistance(userId, vehicleId, todayTotalDistance)
+        FirebaseHelper.saveTotalHighwayDistance(userId, vehicleId, totalHighwayDistanceKm)
+        FirebaseHelper.saveTotalDistance(userId, vehicleId, totalDistanceKm)
+        /*
+        todayTotalHighwayDistance = 0.0
+        todayTotalDistance = 0.0
+        totalHighwayDistanceKm = 0.0
+        totalDistanceKm = 0.0
+         */
+    }
+
+    private fun disableUI() {
+        toggleButton.isEnabled = false
+        /**
+        speedTextView.isEnabled = false
+        currentDistanceTimeTextView.isEnabled = false
+        coordinatesTextView.isEnabled = false
+        errorTextView.isEnabled = false
+        highwayTextView.isEnabled = false
+        highwayNameTextView.isEnabled = false
+        todayTotalDistanceTextView.isEnabled = false
+        todayTotalHighwayDistanceTextView.isEnabled = false
+        totalDistanceKmTextView.isEnabled = false
+        totalHighwayDistanceKmTextView.isEnabled = false
+         **/
+
+        // Set UI transparency to give a "frozen" effect
+        toggleButton.alpha = 0.5f
+        speedTextView.alpha = 0.5f
+        currentDistanceTimeTextView.alpha = 0.5f
+        coordinatesTextView.alpha = 0.5f
+        errorTextView.alpha = 0.5f
+        highwayTextView.alpha = 0.5f
+        highwayNameTextView.alpha = 0.5f
+        todayTotalDistanceTextView.alpha = 0.5f
+        todayTotalHighwayDistanceTextView.alpha = 0.5f
+        totalDistanceKmTextView.alpha = 0.5f
+        totalHighwayDistanceKmTextView.alpha = 0.5f
+    }
+
+    private fun enableUI() {
+        toggleButton.isEnabled = true
+        speedTextView.isEnabled = true
+        currentDistanceTimeTextView.isEnabled = true
+        coordinatesTextView.isEnabled = true
+        errorTextView.isEnabled = true
+        highwayTextView.isEnabled = true
+        highwayNameTextView.isEnabled = true
+        todayTotalDistanceTextView.isEnabled = true
+        todayTotalHighwayDistanceTextView.isEnabled = true
+        totalDistanceKmTextView.isEnabled = true
+        totalHighwayDistanceKmTextView.isEnabled = true
+
+        // Restore full opacity when active
+        toggleButton.alpha = 1.0f
+        speedTextView.alpha = 1.0f
+        currentDistanceTimeTextView.alpha = 1.0f
+        coordinatesTextView.alpha = 1.0f
+        errorTextView.alpha = 1.0f
+        highwayTextView.alpha = 1.0f
+        highwayNameTextView.alpha = 1.0f
+        todayTotalDistanceTextView.alpha = 1.0f
+        todayTotalHighwayDistanceTextView.alpha = 1.0f
+        totalDistanceKmTextView.alpha = 1.0f
+        totalHighwayDistanceKmTextView.alpha = 1.0f
+    }
+
+
+    private val dailyResetHandler = Handler(Looper.getMainLooper())
+    private var resetScheduled = false
+
+    private val dailyResetRunnable = Runnable {
+        Log.d("DailyReset", "Executing daily reset at ${System.currentTimeMillis()}")
+
+        user?.uid?.let { userId ->
+            currentVehicleId?.let { vehicleId ->
+                // 1. Save current day's data
+                saveVehicleData(userId, vehicleId)
+
+                Handler(Looper.getMainLooper()).postDelayed({
+                    // Code to be executed after 6 seconds
+                    // This runs on the main (UI) thread
+                }, 6000) // 6000 milliseconds = 6 seconds
+
+                // 2. Reset values
+                todayTotalDistance = 0.0
+                todayTotalHighwayDistance = 0.0
+
+                // 3. Immediately schedule next reset
+                resetScheduled = false
+                scheduleNextDailyReset()
+            }
+        }
+    }
+
+    private fun scheduleNextDailyReset() {
+        if (resetScheduled) return
+
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = System.currentTimeMillis()
+            // Set to midnight (or your desired reset time)
+            set(Calendar.HOUR_OF_DAY, 23) // 0 for midnight
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 56)
+            set(Calendar.MILLISECOND, 0)
+
+            // If time already passed today, schedule for tomorrow
+            if (timeInMillis <= System.currentTimeMillis()) {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
+        }
+
+        val delay = calendar.timeInMillis - System.currentTimeMillis()
+
+        Log.d("DailyReset", "Next reset scheduled in ${delay / 1000} seconds at ${calendar.time}")
+        resetScheduled = true
+        dailyResetHandler.postDelayed(dailyResetRunnable, delay)
+    }
+
+    fun startDailyResetScheduler() {
+        resetScheduled = false
+        scheduleNextDailyReset()
     }
 }
