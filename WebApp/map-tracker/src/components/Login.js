@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getDatabase, ref, update, get } from "firebase/database";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { useAuth } from "../context/AuthContext"; // adjust the path as needed
-
+import { keyframes } from "@emotion/react";
 import {
   TextField,
   Button,
@@ -15,6 +15,19 @@ import {
   Avatar,
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+
+
+const gradientAnimation = keyframes`
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+`;
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -111,7 +124,6 @@ const Login = () => {
       setError("Invalid OTP. Please try again.");
     }
   };
-
   return (
     <Box
       sx={{
