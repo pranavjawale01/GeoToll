@@ -9,7 +9,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { Player } from "@lottiefiles/react-lottie-player";
-import gpsAnimation from "./Animation - 1745670804478.json";
+import gpsAnimation from "./Animations/Animation - 1745670804478.json";
 
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
