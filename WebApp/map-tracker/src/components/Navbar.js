@@ -24,6 +24,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import GavelIcon from "@mui/icons-material/Gavel";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import GppMaybeIcon from "@mui/icons-material/GppMaybe"; // New icon for Hit and Run system
+
 import AndroidIcon from "@mui/icons-material/Android";
 
 import { getDatabase, ref, update } from "firebase/database";
@@ -64,12 +66,17 @@ const Navbar = () => {
     {
       text: "Penalties",
       icon: <GavelIcon />,
-      onClick: () => navigate("/penalties"),
+      onClick: () => window.open("/penalties", "_blank"), // Open in new tab
     },
     {
       text: "Toll Charges",
       icon: <AttachMoneyIcon />,
-      onClick: () => navigate("/toll-history"),
+      onClick: () => window.open("/toll-history", "_blank"), // Open in new tab
+    },
+    {
+      text: "Hit and Run System", // New menu item
+      icon: <GppMaybeIcon />, // Using the new imported icon
+      onClick: () => window.open("http://localhost:3002/", "_blank"),
     },
     {
       text: "Logout",
