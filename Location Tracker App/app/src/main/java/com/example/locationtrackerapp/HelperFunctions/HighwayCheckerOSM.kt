@@ -112,7 +112,46 @@ object HighwayCheckerOSM {
 
     // Function to check if any token in the name starts with the given prefixes
     private fun checkHighwayPrefixes(name: String): Boolean {
-        val prefixes = listOf("nh", "sh", "mh", "msh", "me", "hwy", "ah")
+        val prefixes = listOf(
+            "nh",  // National Highway
+            "sh",  // State Highway (generic)
+            "mh", "msh", "me",  // Maharashtra (Maharashtra SH, Major SH, ME)
+            "hwy",  // Generic abbreviation for Highway
+            "ah",  // Asian Highway
+            // State-specific highway prefixes (abbreviations used in official/public usage)
+            "ap",  // Andhra Pradesh
+            "ts",  // Telangana
+            "ka",  // Karnataka
+            "tn",  // Tamil Nadu
+            "kl",  // Kerala
+            "gj",  // Gujarat
+            "mp",  // Madhya Pradesh
+            "cg",  // Chhattisgarh
+            "rj",  // Rajasthan
+            "up",  // Uttar Pradesh
+            "uk",  // Uttarakhand
+            "pb",  // Punjab
+            "hr",  // Haryana
+            "hp",  // Himachal Pradesh
+            "jk", "j&k",  // Jammu & Kashmir
+            "br",  // Bihar
+            "wb",  // West Bengal
+            "od", "or",  // Odisha
+            "jh",  // Jharkhand
+            "as",  // Assam
+            "nl",  // Nagaland
+            "ml",  // Meghalaya
+            "mn",  // Manipur
+            "mz",  // Mizoram
+            "tr",  // Tripura
+            "ar",  // Arunachal Pradesh
+            "sk",  // Sikkim
+            "ga",  // Goa
+            "dn", "dd",  // Daman & Diu, Dadra & Nagar Haveli
+            "ch",  // Chandigarh
+            "ld",  // Lakshadweep
+            "an"   // Andaman & Nicobar
+        )
         // Tokenize the name by spaces and commas using regular expression
         val tokens = name.split(Regex("[ ,]+"))
 
@@ -121,9 +160,6 @@ object HighwayCheckerOSM {
             prefixes.any { token.startsWith(it, ignoreCase = true) }
         }
     }
-
-
-
 
     private const val OVERPASS_API_URL = "https://overpass-api.de/api/interpreter"
 
