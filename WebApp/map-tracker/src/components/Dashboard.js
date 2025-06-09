@@ -6,11 +6,14 @@ import {
   FormControl,
   Select,
   InputLabel,
+  CircularProgress,
 } from "@mui/material";
+import { Player } from "@lottiefiles/react-lottie-player";
+import gpsAnimation from "./Animations/Animation - 1745670804478.json";
 
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { database } from "../firebase"; // Ensure Firebase is correctly imported
+import { database } from "../firebase";
 import { ref, get } from "firebase/database";
 import UserLocation from "./UserLocation";
 import UserMap from "./UserMap";
@@ -124,40 +127,62 @@ const Dashboard = () => {
   };
 
   return (
-    <Box sx={{ flexGrow: 1, bgcolor: "background.default", p: 3, mt: 6.5 }}>
-      <Typography variant="h5" gutterBottom textAlign="center">
-        Welcome to the Dashboard
+    <Box
+      sx={{
+        flexGrow: 1,
+        bgcolor: "linear-gradient(to right, #e0f7fa, #e3f2fd)",
+        minHeight: "100vh",
+        py: 5,
+        px: { xs: 2, md: 6 },
+      }}
+    >
+      <Typography
+        variant="h4"
+        textAlign="center"
+        // fontWeight="bold"
+        color="primary.main"
+        mt={4} // Add top margin here
+        sx={{
+          textShadow: "1px 1px 2px rgba(0,0,0,0.1)",
+        }}
+      >
+        Your Dashboard
       </Typography>
 
       {userId ? (
         <>
+          {/* Vehicle & Date Selection Section */}
           <Box
             sx={{
-              flexGrow: 1, // Add shadow
-              transition: "transform 0.2s, box-shadow 0.2s", // Smooth transition for hover
-              mt: 1, // Add margin top to separate the two boxes
+              mx: "auto",
+              maxWidth: "1000px",
+              p: 4,
+              bgcolor: "white",
+              borderRadius: 4,
+              boxShadow: "0px 8px 20px rgba(0,0,0,0.1)",
+              mb: 1,
+              transition: "0.3s",
               "&:hover": {
-                transform: "scale(1.01)", // Slightly scale up on hover
-                // Increase shadow on hover
+                transform: "scale(1.01)",
+                boxShadow: "0px 12px 24px rgba(0,0,0,0.15)",
               },
             }}
           >
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "space-between",
-                mx: 6.5,
-                width: "96%",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: 4,
               }}
             >
-              {/* Vehicle Selection Dropdown */}
-              <FormControl sx={{ width: "48%" }}>
+              {/* Vehicle Dropdown */}
+              <FormControl sx={{ minWidth: 250 }}>
                 <InputLabel>Select Vehicle</InputLabel>
                 <Select
                   value={selectedVehicle}
                   onChange={handleVehicleChange}
                   label="Select Vehicle"
-                  MenuProps={{ PaperProps: { sx: { maxHeight: 200 } } }}
                 >
                   {vehicles.length > 0 ? (
                     vehicles.map((vehicle, index) => (
@@ -171,20 +196,14 @@ const Dashboard = () => {
                 </Select>
               </FormControl>
 
-              <FormControl sx={{ mx: 6.5, width: "48%" }}>
+              {/* Date Dropdown */}
+              <FormControl sx={{ minWidth: 250 }}>
                 <InputLabel>Select Date</InputLabel>
                 <Select
                   value={selectedDate}
-                  onChange={handleDateChange} // Update the selected date on user selection
+                  onChange={handleDateChange}
                   onClick={handleDateClick}
                   label="Select Date"
-                  MenuProps={{
-                    PaperProps: {
-                      sx: {
-                        maxHeight: 200, // Limit dropdown height to avoid it being too long
-                      },
-                    },
-                  }}
                 >
                   {availableDates.length > 0 ? (
                     availableDates.map((date) => (
@@ -200,10 +219,18 @@ const Dashboard = () => {
             </Box>
           </Box>
 
-          <Box sx={{ display: "flex" }}>
-            {/* Left container for the map */}
-            <Box sx={{ flex: 1, mr: 2 }}>
-              {/* Add margin to separate the two columns */}
+          {/* Main Content Area */}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", md: "row" },
+              gap: 2,
+              mx: "auto",
+              maxWidth: "1400px",
+            }}
+          >
+            {/* Left Side: Location + Map */}
+            <Box sx={{ flex: 2 }}>
               <UserLocation
                 userId={userId}
                 selectedVehicle={selectedVehicle}
@@ -211,70 +238,86 @@ const Dashboard = () => {
                 onLocationsUpdate={setLocations}
               />
 
-              {locations.length > 0 && (
-                <Box sx={{ mt: 2 }}>
-                  <Box
-                    sx={{
-                      ml: 7,
-                      width: "90%",
-                      height: "470px",
-                      borderRadius: 2,
-                      overflow: "hidden",
-                      transition: "transform 0.2s, box-shadow 0.2s", // Smooth transition for hover
-                      mt: 1, // Add margin top to separate the two boxes
-                      "&:hover": {
-                        transform: "scale(1.02)", // Slightly scale up on hover
-                        boxShadow: 4, // Increase shadow on hover
-                      },
-                    }}
-                  >
-                    <UserMap locations={locations} userId={userId} />
-                  </Box>
-                </Box>
-              )}
-            </Box>
-
-            {/* Right container for distance info */}
-            <Box sx={{ mr: 1, mt: 2 }}>
               <Box
                 sx={{
-                  backgroundColor: "#e3f2fd",
-                  borderRadius: 2,
-                  paddingX: 1, // Horizontal padding
-                  paddingY: 0.5, // Reduced vertical padding
-                  border: "1px solid #ccc", // Set boundary
-                  boxShadow: 2, // Add shadow
-                  transition: "transform 0.2s, box-shadow 0.2s", // Smooth transition for hover
+                  ml: 4, // <-- ADD THIS for left spacing
+                  height: { xs: "400px", md: "470px" },
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  boxShadow: "0px 8px 20px rgba(0,0,0,0.1)",
+                  transition: "0.3s",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "column",
                   "&:hover": {
-                    transform: "scale(1.01)", // Slightly scale up on hover
-                    boxShadow: 4, // Increase shadow on hover
+                    transform: "scale(1.01)",
+                    boxShadow: "0px 12px 24px rgba(0,0,0,0.15)",
                   },
-                  height: 145,
+                }}
+              >
+                {selectedVehicle && selectedDate && locations.length > 0 ? (
+                  <UserMap locations={locations} userId={userId} />
+                ) : (
+                  <>
+                    <Player
+                      autoplay
+                      loop
+                      src={gpsAnimation}
+                      style={{ height: "200px", width: "200px" }}
+                    />
+                    <Typography
+                      variant="h6"
+                      color="textSecondary"
+                      mt={2}
+                      textAlign="center"
+                    >
+                      Please select a vehicle and date to view your GPS
+                      location.
+                    </Typography>
+                  </>
+                )}
+              </Box>
+            </Box>
+
+            {/* Right Side: Cards */}
+            <Box
+              sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}
+            >
+              {/* Today Distance */}
+              <Box
+                sx={{
+                  bgcolor: "#f1f8e9",
+                  borderRadius: 4,
+                  p: 2,
+                  boxShadow: "0px 4px 12px rgba(0,0,0,0.1)",
+                  transition: "0.3s",
+                  "&:hover": {
+                    transform: "scale(1.02)",
+                    boxShadow: "0px 8px 16px rgba(0,0,0,0.15)",
+                  },
                 }}
               >
                 <TodayDistanceInfo
                   userId={userId}
                   selectedVehicle={selectedVehicle}
                   selectedDate={selectedDate}
-                  onTollUpdate={setTodayTotalCost} // Pass callback
+                  onTollUpdate={setTodayTotalCost}
                 />
               </Box>
 
+              {/* Total Distance */}
               <Box
                 sx={{
-                  backgroundColor: "#e3f2fd",
-                  borderRadius: 2,
-                  paddingX: 1, // Horizontal padding
-                  paddingY: 0.5, // Reduced vertical padding
-                  border: "1px solid #ccc", // Set boundary
-                  boxShadow: 2, // Add shadow
-                  transition: "transform 0.2s, box-shadow 0.2s", // Smooth transition for hover
-                  mt: 1, // Add margin top to separate the two boxes
+                  bgcolor: "#e8f5e9",
+                  borderRadius: 4,
+                  p: 2,
+                  boxShadow: "0px 4px 12px rgba(0,0,0,0.1)",
+                  transition: "0.3s",
                   "&:hover": {
-                    transform: "scale(1.01)", // Slightly scale up on hover
-                    boxShadow: 4, // Increase shadow on hover
+                    transform: "scale(1.02)",
+                    boxShadow: "0px 8px 16px rgba(0,0,0,0.15)",
                   },
-                  height: 145,
                 }}
               >
                 <TotalDistanceInfo
@@ -283,55 +326,81 @@ const Dashboard = () => {
                 />
               </Box>
 
+              {/* Action Buttons */}
               <Box
                 sx={{
-                  backgroundColor: "#e3f2fd",
-                  borderRadius: 2,
-                  paddingX: 1, // Horizontal padding
-                  paddingY: 0.5, // Reduced vertical padding
-                  border: "1px solid #ccc", // Set boundary
-                  boxShadow: 2, // Add shadow
-                  transition: "transform 0.2s, box-shadow 0.2s", // Smooth transition for hover
-                  mt: 1, // Add margin top to separate the two boxes
-                  "&:hover": {
-                    transform: "scale(1.01)", // Slightly scale up on hover
-                    boxShadow: 4, // Increase shadow on hover
-                  },
-                  height: 145,
-                }}
-              >
-                <div
-                style={{
+                  bgcolor: "#fce4ec",
+                  borderRadius: 4,
+                  p: 2,
                   display: "flex",
-                  flexDirection: "column", // Stack vertically
-                  alignItems: "center", // Center horizontally
-                  gap: "10px", // Optional spacing between buttons
-                  width: "100%",
-                  paddingTop: "20px"  
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 2,
+                  boxShadow: "0px 4px 12px rgba(0,0,0,0.1)",
+                  transition: "0.3s",
+                  "&:hover": {
+                    transform: "scale(1.02)",
+                    boxShadow: "0px 8px 16px rgba(0,0,0,0.15)",
+                  },
                 }}
               >
                 <button
-                  className="button-impressive"
-                  style={{ width: "200px" }}
+                  style={{
+                    width: "80%",
+                    padding: "12px",
+                    fontSize: "16px",
+                    fontWeight: "bold",
+                    borderRadius: "30px",
+                    background: "linear-gradient(45deg, #42a5f5, #478ed1)",
+                    color: "white",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "background 0.3s",
+                  }}
                   onClick={() => navigate("/toll-history")}
+                  onMouseOver={(e) =>
+                    (e.currentTarget.style.background =
+                      "linear-gradient(45deg, #478ed1, #42a5f5)")
+                  }
+                  onMouseOut={(e) =>
+                    (e.currentTarget.style.background =
+                      "linear-gradient(45deg, #42a5f5, #478ed1)")
+                  }
                 >
                   Pay Toll
                 </button>
+
                 <button
-                  className="button-impressive"
-                  style={{ width: "200px" }}
+                  style={{
+                    width: "80%",
+                    padding: "12px",
+                    fontSize: "16px",
+                    fontWeight: "bold",
+                    borderRadius: "30px",
+                    background: "linear-gradient(45deg, #66bb6a, #43a047)",
+                    color: "white",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "background 0.3s",
+                  }}
                   onClick={() => navigate("/penalties")}
+                  onMouseOver={(e) =>
+                    (e.currentTarget.style.background =
+                      "linear-gradient(45deg, #43a047, #66bb6a)")
+                  }
+                  onMouseOut={(e) =>
+                    (e.currentTarget.style.background =
+                      "linear-gradient(45deg, #66bb6a, #43a047)")
+                  }
                 >
                   Pay Penalties
                 </button>
-              </div>
-
               </Box>
             </Box>
           </Box>
         </>
       ) : (
-        <Typography variant="body1" textAlign="center">
+        <Typography variant="h6" textAlign="center" mt={5} color="error">
           Please log in to view your location and map.
         </Typography>
       )}
